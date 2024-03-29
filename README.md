@@ -1,0 +1,2 @@
+# lualine-pretty-path
+
