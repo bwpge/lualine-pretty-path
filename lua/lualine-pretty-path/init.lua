@@ -35,7 +35,7 @@ function M.parse_path(opts)
     end
 
     if #parts > 3 then
-        parts = { parts[1], "…", parts[#parts - 1], parts[#parts] }
+        parts = { parts[1], opts.symbols.ellipsis, parts[#parts - 1], parts[#parts] }
     end
 
     local is_unnamed = false

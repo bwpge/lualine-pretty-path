@@ -12,6 +12,7 @@ local default_options = {
     symbols = {
         modified = "",
         readonly = "",
+        ellipsis = "…",
     },
     term = {
         show_pid = true,
@@ -21,11 +22,11 @@ local default_options = {
     },
     highlights = {
         directory = "",
-        file = "Bold",
+        filename = "Bold",
         modified = "MatchParen",
         pid = "Comment",
         symbols = "",
-        term = "",
+        term = "Bold",
         toggleterm_id = "Number",
         unnamed = "",
     },
@@ -116,8 +117,10 @@ function M:_get_name(p)
         name = self:_hl(name, self.options.highlights.modified)
     elseif p.is_unnamed then
         name = self:_hl(name, self.options.highlights.unnamed)
+    elseif p.is_term then
+        name = self:_hl(name, self.options.highlights.term)
     else
-        name = self:_hl(name, self.options.highlights.file)
+        name = self:_hl(name, self.options.highlights.filename)
     end
 
     return name
