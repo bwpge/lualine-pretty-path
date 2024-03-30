@@ -41,7 +41,7 @@ function M.parse_path(opts)
     local is_unnamed = false
     if parts[#parts] == "" then
         is_unnamed = true
-        parts[#parts] = opts.symbols.unnamed
+        parts[#parts] = opts.unnamed
     end
 
     return {
@@ -58,6 +58,7 @@ end
 ---@param path string
 ---@return TermInfo
 function M.parse_term_path(path)
+    path = vim.split(path, "//")[3] or ""
     local pid = tonumber(path:match("^(%d+):"))
     local toggleterm_id = tonumber(path:match("::toggleterm::(%d+)"))
 
@@ -65,10 +66,9 @@ function M.parse_term_path(path)
         local term = utils.get_toggleterm_by_id(toggleterm_id)
         if term then
             path = term:_display_name() or ""
-            path = path:gsub("::toggleterm::%d+", "")
+            path = path:gsub("::toggleterm::%d+$", "")
         end
     else
-        path = vim.split(path, "//")[3] or ""
         path = path:gsub("^%d+:", ""):gsub("::toggleterm::%d+", "")
     end
 
