@@ -2,6 +2,10 @@
 
 A [LazyVim](https://www.lazyvim.org/plugins/ui#lualinenvim)-style filename component for [`lualine.nvim`](https://github.com/nvim-lualine/lualine.nvim).
 
+<p align="center">
+    <img src="https://github.com/bwpge/lualine-pretty-path/assets/114827766/e88b2c0f-a481-4f4b-82db-03ed642d9a6c">
+</p>
+
 ## Overview
 
 First and foremost, [@folke](https://github.com/folke) deserves all credit for this style. All I've done with this plugin is pull out some of the LazyVim logic and placed it into a package with some additional options. If you like what he creates, be sure to star his projects and support his work however you can.
@@ -76,7 +80,7 @@ The following are the default component options:
     highlights = {
         directory = "", -- the directory portion of the component
         file = "Bold", -- the filename portion of the component
-        modified = "MatchParen", -- the filename if it is modified
+        modified = "MatchParen", -- filename highlight if it is modified
         pid = "Comment", -- the process id in a terminal window
         symbols = "", -- the symbols at the end of the component
         term = "", -- highlight if the buffer is a terminal
