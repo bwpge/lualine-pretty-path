@@ -21,7 +21,7 @@ This plugin provides a component that combines LazyVim's `pretty_path` function 
 
 ## Installation
 
-With [`lazy.nvim`](https://github.com/folke/lazy.nvim):
+With [`lazy.nvim`](https://github.com/folke/lazy.nvim)
 
 ```lua
 {
@@ -63,10 +63,10 @@ The following are the default component options:
     path_sep = "", -- path separator for styling output (doesn't affect buffer path)
     file_status = true, -- whether or not to indicate file status with symbols
     unnamed = "[No Name]", -- label for unnamed/new buffers
-    -- symbols used to indicate the status of the buffer
     symbols = {
         modified = "", -- somewhat redundant if using modified highlight
         readonly = "",
+        ellipsis = "…", -- used for trimming directory parts
     },
     -- terminal-specific options
     term = {
@@ -79,11 +79,11 @@ The following are the default component options:
     -- passed to vim.api.nvim_set_hl. empty string uses default section style.
     highlights = {
         directory = "", -- the directory portion of the component
-        file = "Bold", -- the filename portion of the component
+        filename = "Bold", -- the filename portion of the component
         modified = "MatchParen", -- filename highlight if it is modified
         pid = "Comment", -- the process id in a terminal window
         symbols = "", -- the symbols at the end of the component
-        term = "", -- highlight if the buffer is a terminal
+        term = "Bold", -- highlight if the buffer is a terminal
         toggleterm_id = "Number", -- terminal id if in a toggleterm window
         unnamed = "", -- highlight if the buffer is unnamed
     },
