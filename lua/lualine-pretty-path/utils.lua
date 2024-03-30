@@ -6,6 +6,7 @@ function M.is_readonly()
     return vim.bo.modifiable == false or vim.bo.readonly == true
 end
 
+---Returns a toggleterm `Terminal` if the given `id` exists and is not hidden.
 ---@param tid number?
 ---@return any
 function M.get_toggleterm_by_id(tid)

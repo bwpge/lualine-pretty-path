@@ -63,11 +63,13 @@ function M:update_status()
     return dir .. name .. symbols
 end
 
+---Updates the component icon based on the current path information.
+---@param p PathInfo
 function M:_set_icon(p)
     local _, devicons = pcall(require, "nvim-web-devicons")
     if devicons then
         local icon, hl
-        if p.unnamed then
+        if p.is_unnamed then
             icon = nil
         elseif p.is_term then
             icon = devicons.get_icon_by_filetype("terminal")
@@ -86,18 +88,25 @@ function M:_set_icon(p)
     end
 end
 
+---Returns a formatted filename for the given path information.
+---@param p PathInfo
+---@return string
 function M:_get_name(p)
     local name = p.parts[#p.parts]
     if vim.bo.modified then
         name = utils.lualine_format_hl(self, name, self.options.highlights.modified)
-    elseif p.unnamed then
+    elseif p.is_unnamed then
         name = utils.lualine_format_hl(self, name, self.options.highlights.unnamed)
     else
         name = utils.lualine_format_hl(self, name, self.options.highlights.file)
     end
+
     return name
 end
 
+---Returns a formatted symbols string based on the current buffer and path information.
+---@param p PathInfo
+---@return string
 function M:_get_symbols(p)
     local opts = self.options
     local symbols = {}
@@ -136,13 +145,19 @@ function M:_get_symbols(p)
     end
 end
 
+---Returns a formatted directory for the given path information.
+---@param p PathInfo
+---@return string
 function M:_get_dir(p)
     local dir = ""
-    local sep = self.options.visual_path_sep
     if #p.parts > 1 then
+        local sep = self.options.visual_path_sep
+        local hl = self.options.highlights.directory
+
         dir = table.concat({ unpack(p.parts, 1, #p.parts - 1) }, sep)
-        dir = utils.lualine_format_hl(self, dir .. sep, self.options.highlights.directory)
+        dir = utils.lualine_format_hl(self, dir .. sep, hl)
     end
+
     return dir
 end
 
