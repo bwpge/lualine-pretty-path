@@ -43,11 +43,22 @@ function M.lualine_format_hl(component, text, hl_group)
         lualine_hl_group = component:create_hl({
             fg = u.extract_highlight_colors(hl_group, "fg"),
             gui = #gui > 0 and table.concat(gui, ",") or nil,
-        }, "PRETTY_" .. hl_group) --[[@as string]]
+        }, hl_group) --[[@as string]]
         component.hl_cache[hl_group] = lualine_hl_group
     end
 
     return component:format_hl(lualine_hl_group) .. text .. component:get_default_hl()
+end
+
+---Formats a number with a hook or fallback function.
+---@param value number
+---@param hook fun(id: number): string?
+---@param fallback? fun(id: number): string
+---@return string
+function M.fmt_number(value, hook, fallback)
+    fallback = fallback or tostring
+    local fn = vim.F.if_nil(hook, fallback)
+    return fn(value) or fallback(value)
 end
 
 return M

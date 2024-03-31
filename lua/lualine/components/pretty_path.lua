@@ -5,7 +5,6 @@ local M = lualine_require.require("lualine.component"):extend()
 
 local default_options = {
     icon_show = true,
-    dir_show = true,
     path_sep = "",
     file_status = true,
     unnamed = "[No Name]",
@@ -14,21 +13,34 @@ local default_options = {
         readonly = "",
         ellipsis = "…",
     },
-    term = {
+    directories = {
+        enable = true,
+        shorten = true,
+        exclude_filetypes = { "help" },
+        use_absolute = false,
+        max_depth = 2,
+    },
+    terminals = {
         show_pid = true,
-        show_toggleterm_id = true,
-        pid_fmt = tostring,
-        toggleterm_id_fmt = tostring,
+        show_term_id = true,
     },
     highlights = {
         directory = "",
         filename = "Bold",
         modified = "MatchParen",
+        path_sep = "",
         pid = "Comment",
         symbols = "",
         term = "Bold",
         toggleterm_id = "Number",
         unnamed = "",
+    },
+    hooks = {
+        on_shorten_dir = nil,
+        on_fmt_filename = nil,
+        on_fmt_directory = nil,
+        on_fmt_pid = nil,
+        on_fmt_term_id = nil,
     },
     icon_padding = {
         [""] = 1,
@@ -48,6 +60,13 @@ function M:init(options)
         self.options.path_sep = utils.path_sep
     end
 
+    -- unset invalid hooks
+    for key, hook in pairs(self.options.hooks) do
+        if type(hook) ~= "function" then
+            self.options.hooks[key] = nil
+        end
+    end
+
     -- create highlight groups
     for key, hl in pairs(self.options.highlights) do
         if type(hl) == "table" then
@@ -59,7 +78,11 @@ function M:init(options)
 end
 
 function M:update_status()
-    local p = pretty_path.parse_path(self.options)
+    local s = self.options.directories.use_absolute and ":p" or ":~:."
+    local p = pretty_path.parse_path(vim.fn.expand("%"), s)
+    if p.is_unnamed then
+        p.parts = { self.options.unnamed or "" }
+    end
 
     self:_set_icon(p)
     local name = self:_get_name(p)
@@ -112,7 +135,11 @@ end
 ---@param p PathInfo
 ---@return string
 function M:_get_name(p)
-    local name = p.parts[#p.parts]
+    local name = p.parts[#p.parts] or ""
+    if self.options.hooks.on_fmt_filename then
+        name = self.options.hooks.on_fmt_filename(name)
+    end
+
     if vim.bo.modified then
         name = self:_hl(name, self.options.highlights.modified)
     elseif p.is_unnamed then
@@ -135,19 +162,13 @@ function M:_get_symbols(p)
     local symbols = {}
 
     if p.is_term then
-        -- toggleterm id
-        if opts.term.show_toggleterm_id and p.toggleterm_id then
-            local tid = opts.term.toggleterm_id_fmt(p.toggleterm_id)
-            if tid then
-                table.insert(symbols, self:_hl(tid, opts.highlights.toggleterm_id))
-            end
+        if opts.terminals.show_term_id and p.toggleterm_id then
+            local tid = utils.fmt_number(p.toggleterm_id, opts.hooks.on_fmt_term_id)
+            table.insert(symbols, self:_hl(tid, opts.highlights.toggleterm_id))
         end
-        -- terminal pid
-        if opts.term.show_pid and p.pid then
-            local pid = opts.term.pid_fmt(p.pid)
-            if pid then
-                table.insert(symbols, self:_hl(pid, opts.highlights.pid))
-            end
+        if opts.terminals.show_pid and p.pid then
+            local pid = utils.fmt_number(p.pid, opts.hooks.on_fmt_pid)
+            table.insert(symbols, self:_hl(pid, opts.highlights.pid))
         end
     elseif opts.file_status then
         if opts.symbols.modified and vim.bo.modified then
@@ -170,16 +191,47 @@ end
 ---@param p PathInfo
 ---@return string
 function M:_get_dir(p)
+    local opts = self.options
     local dir = ""
-    if not self.options.dir_show then
+    if
+        not opts.directories.enable
+        or vim.tbl_contains(opts.directories.exclude_filetypes, vim.bo.filetype)
+    then
         return dir
     end
 
-    if #p.parts > 1 then
-        local sep = self.options.path_sep
-        local hl = self.options.highlights.directory
+    local slice = { unpack(p.parts, 1, #p.parts - 1) }
+    if opts.directories.shorten and #slice > opts.directories.max_depth then
+        local tmp = nil
+        if opts.hooks.on_shorten_dir then
+            tmp = opts.hooks.on_shorten_dir(slice)
+        end
+        if type(tmp) ~= "table" then
+            if #slice == 1 then
+                tmp = slice
+            elseif #slice == 2 then
+                tmp = { slice[1], opts.symbols.ellipsis }
+            else
+                tmp = { slice[1], opts.symbols.ellipsis, slice[#slice] }
+            end
+        end
+        slice = tmp
+    end
 
-        dir = table.concat({ unpack(p.parts, 1, #p.parts - 1) }, sep)
+    if #slice > 1 then
+        local sep = opts.path_sep
+        if #opts.highlights.path_sep > 0 then
+            sep = self:_hl(sep, opts.highlights.path_sep)
+        end
+        local hl = opts.highlights.directory
+
+        if opts.hooks.on_fmt_directory then
+            local tmp = opts.hooks.on_fmt_directory(slice)
+            if type(tmp) == "table" then
+                slice = tmp
+            end
+        end
+        dir = table.concat(slice, sep)
         dir = self:_hl(dir .. sep, hl)
     end
 

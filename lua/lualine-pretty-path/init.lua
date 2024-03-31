@@ -15,15 +15,17 @@ local M = {}
 ---@field pid? number
 ---@field toggleterm_id? number
 
----Parses the current buffer path and returns its details.
----@param opts table
+---Parses the `fname` with the given `mods` and returns `PathInfo`.
+---@param fname string The filename (default: `vim.fn.expand("%")`)
+---@param mods string? Modifiers passed to fnamemodify (e.g., `:~:.`)
 ---@return PathInfo
-function M.parse_path(opts)
-    local path = vim.fn.expand("%:~:.")
-
+function M.parse_path(fname, mods)
+    -- avoid expanding an empty filename
+    local path = #fname > 0 and vim.fn.fnamemodify(fname, mods) or ""
     local sep = utils.path_sep
     local is_term = false
     local parts, pid, toggleterm_id
+
     if path:find("^term://") then
         local t = M.parse_term_path(path)
         is_term = true
@@ -31,19 +33,10 @@ function M.parse_path(opts)
         pid = t.pid
         toggleterm_id = t.toggleterm_id
     else
-        parts = vim.split(path, sep)
+        parts = vim.split(path, sep, { trimempty = true })
     end
 
-    if #parts > 3 then
-        parts = { parts[1], opts.symbols.ellipsis, parts[#parts - 1], parts[#parts] }
-    end
-
-    local is_unnamed = false
-    if parts[#parts] == "" then
-        is_unnamed = true
-        parts[#parts] = opts.unnamed
-    end
-
+    local is_unnamed = #parts == 0
     return {
         path = path,
         is_term = is_term,
