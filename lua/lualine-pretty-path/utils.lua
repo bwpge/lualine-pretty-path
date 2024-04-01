@@ -1,14 +1,17 @@
 local M = {}
 
----@class BufferInfo
+---@class PerttyPath.BufferInfo
 ---@field path string
 ---@field parts string[]
 ---@field is_unnamed boolean
 ---@field is_term boolean
----@field pid? number
+---@field pid? string
 ---@field terminal? table
 
----@alias TermInfo { name: string, pid?: number, terminal?: table }
+---@class PrettyPath.TermInfo
+---@field name string
+---@field pid? string
+---@field terminal? table
 
 M.path_sep = package.config:sub(1, 1)
 
@@ -17,14 +20,19 @@ function M.is_readonly()
 end
 
 ---Returns a toggleterm `Terminal` if the given `id` exists and is not hidden.
----@param tid number?
----@return any
+---@param tid string?
+---@return unknown?
 function M.get_toggleterm_by_id(tid)
-    if not tid or not package.loaded["toggleterm"] then
+    if not package.loaded["toggleterm"] then
         return
     end
 
-    return require("toggleterm.terminal").get(tid)
+    local id = tonumber(tid)
+    if not id then
+        return
+    end
+
+    return require("toggleterm.terminal").get(id)
 end
 
 ---Formats a lualine component with a highlight group.
@@ -75,7 +83,7 @@ end
 ---Parses the `fname` with the given `mods` and returns `PathInfo`.
 ---@param fname string The filename (default: `vim.fn.expand("%")`)
 ---@param mods string? Modifiers passed to fnamemodify (e.g., `:~:.`)
----@return BufferInfo
+---@return PerttyPath.BufferInfo
 function M.parse_path(fname, mods)
     -- avoid expanding an empty filename
     local path = #fname > 0 and vim.fn.fnamemodify(fname, mods) or ""
@@ -105,11 +113,11 @@ end
 
 ---Parses a `term://` path and returns its parts.
 ---@param path string
----@return TermInfo
+---@return PrettyPath.TermInfo
 function M.parse_term_path(path)
     path = vim.split(path, "//")[3] or ""
-    local pid = tonumber(path:match("^(%d+):"))
-    local toggleterm_id = tonumber(path:match("::toggleterm::(%d+)"))
+    local pid = path:match("^(%d+):") --[[@as string?]]
+    local toggleterm_id = path:match("::toggleterm::(%d+)") --[[@as string?]]
     local terminal = nil
 
     if toggleterm_id then

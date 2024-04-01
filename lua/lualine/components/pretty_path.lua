@@ -2,6 +2,54 @@ local utils = require("lualine-pretty-path.utils")
 local lualine_require = require("lualine_require")
 local M = lualine_require.require("lualine.component"):extend()
 
+---@class PrettyPath.SymbolOptions
+---@field modified string
+---@field readonly string
+---@field ellipsis string
+
+---@class PrettyPath.DirectoryOptions
+---@field enable boolean
+---@field shorten boolean
+---@field exclude_filetypes string[]
+---@field use_absolute boolean
+---@field max_depth number
+
+---@class PrettyPath.TerminalOptions
+---@field show_pid boolean
+---@field show_term_id boolean
+
+---@class PrettyPath.HighlightOptions
+---@field directory? string?
+---@field filename? string?
+---@field modified? string?
+---@field path_sep? string?
+---@field pid? string?
+---@field symbols? string?
+---@field term? string?
+---@field toggleterm_id? string?
+---@field unnamed? string?
+
+---@class PrettyPath.HookOptions
+---@field on_shorten_dir? fun(parts: string[], ellipsis: string): string[]
+---@field on_fmt_filename? fun(name: string): string
+---@field on_fmt_terminal? fun(info: { name: string, path: string, pid?: string, term_id?: string, term?: unknown }): { name: string, pid?: string, term_id?: string }
+---@field on_fmt_directory? fun(parts: string[]): string[]
+
+---@class PrettyPath.Options
+---@field icon string?
+---@field icon_show boolean
+---@field use_color boolean
+---@field path_sep string
+---@field file_status boolean
+---@field unnamed string
+---@field symbols PrettyPath.SymbolOptions
+---@field directories PrettyPath.DirectoryOptions
+---@field terminals PrettyPath.TerminalOptions
+---@field highlights PrettyPath.HighlightOptions
+---@field hooks PrettyPath.HookOptions
+---@field icon_padding table<string, number>
+
+---@type PrettyPath.Options
 local default_options = {
     icon_show = true,
     use_color = true,
@@ -48,7 +96,8 @@ local default_options = {
 
 function M:init(options)
     M.super.init(self, options)
-    self.options = vim.tbl_deep_extend("keep", self.options or {}, default_options)
+    self.options = vim.tbl_deep_extend("keep", self.options or {}, default_options) --[[@as PrettyPath.Options]]
+
     if self.options.symbols.modified == "" then
         self.options.symbols.modified = nil
     end
@@ -77,8 +126,8 @@ function M:init(options)
 end
 
 function M:update_status()
-    local s = self.options.directories.use_absolute and ":p" or ":~:."
-    local info = utils.parse_path(vim.fn.expand("%"), s)
+    local mods = self.options.directories.use_absolute and ":p" or ":~:."
+    local info = utils.parse_path(vim.fn.expand("%"), mods)
     if info.is_unnamed then
         info.parts = { self.options.unnamed or "" }
     end
@@ -104,7 +153,7 @@ end
 
 ---Updates the component icon based on the current path information.
 ---@private
----@param info BufferInfo
+---@param info PerttyPath.BufferInfo
 function M:_set_icon(info)
     local ok, devicons = pcall(require, "nvim-web-devicons")
     if not ok or not self.options.icon_show then
@@ -134,12 +183,12 @@ end
 
 ---Returns a formatted filename for the given path information.
 ---@private
----@param info BufferInfo
+---@param info PerttyPath.BufferInfo
 ---@return string
 function M:_get_name(info)
     local items = {}
     local name = info.parts[#info.parts] or ""
-    local pid = tostring(info.pid)
+    local pid = info.pid
     local term_id = info.terminal and tostring(info.terminal.id)
 
     if info.is_term then
@@ -189,7 +238,7 @@ end
 
 ---Returns a formatted symbols string based on the current buffer and path information.
 ---@private
----@param info BufferInfo
+---@param info PerttyPath.BufferInfo
 ---@return string
 function M:_get_symbols(info)
     local opts = self.options
@@ -216,7 +265,7 @@ end
 
 ---Returns a formatted directory for the given path information.
 ---@private
----@param info BufferInfo
+---@param info PerttyPath.BufferInfo
 ---@return string
 function M:_get_dir(info)
     local opts = self.options
@@ -230,17 +279,19 @@ function M:_get_dir(info)
 
     local slice = { unpack(info.parts, 1, #info.parts - 1) }
     if opts.directories.shorten and #slice > opts.directories.max_depth then
-        local tmp
+        local ellipsis = opts.symbols.ellipsis
+        local tmp = nil
+
         if opts.hooks.on_shorten_dir then
-            tmp = opts.hooks.on_shorten_dir(slice)
+            tmp = opts.hooks.on_shorten_dir(slice, ellipsis)
         end
         if type(tmp) ~= "table" then
             if #slice == 1 then
                 tmp = slice
             elseif #slice == 2 then
-                tmp = { slice[1], opts.symbols.ellipsis }
+                tmp = { slice[1], ellipsis }
             else
-                tmp = { slice[1], opts.symbols.ellipsis, slice[#slice] }
+                tmp = { slice[1], ellipsis, slice[#slice] }
             end
         end
         slice = tmp
@@ -251,7 +302,6 @@ function M:_get_dir(info)
         if #opts.highlights.path_sep > 0 then
             sep = self:_hl(sep, opts.highlights.path_sep)
         end
-        local hl = opts.highlights.directory
 
         if opts.hooks.on_fmt_directory then
             local tmp = opts.hooks.on_fmt_directory(slice)
@@ -259,8 +309,9 @@ function M:_get_dir(info)
                 slice = tmp
             end
         end
+
         dir = table.concat(slice, sep)
-        dir = self:_hl(dir .. sep, hl)
+        dir = self:_hl(dir .. sep, opts.highlights.directory)
     end
 
     return dir
