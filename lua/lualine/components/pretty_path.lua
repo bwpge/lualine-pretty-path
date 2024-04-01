@@ -38,9 +38,8 @@ local default_options = {
     hooks = {
         on_shorten_dir = nil,
         on_fmt_filename = nil,
+        on_fmt_terminal = nil,
         on_fmt_directory = nil,
-        on_fmt_pid = nil,
-        on_fmt_term_id = nil,
     },
     icon_padding = {
         [""] = 1,
@@ -116,7 +115,7 @@ function M:_set_icon(info)
     local icon, hl
     if info.is_unnamed then
         icon = nil
-    elseif info.terminal then
+    elseif info.is_term then
         icon = devicons.get_icon_by_filetype("terminal")
     else
         icon, hl = devicons.get_icon(vim.fn.expand("%:t"))
@@ -138,13 +137,32 @@ end
 ---@param info BufferInfo
 ---@return string
 function M:_get_name(info)
+    local items = {}
     local name = info.parts[#info.parts] or ""
-    -- TODO: add terminal name hook
+    local pid = tostring(info.pid)
+    local term_id = info.terminal and tostring(info.terminal.id)
 
-    if self.options.hooks.on_fmt_filename then
-        local tmp = self.options.hooks.on_fmt_filename(name)
-        if type(tmp) == "string" then
-            name = tmp
+    if info.is_term then
+        if self.options.hooks.on_fmt_terminal then
+            local tmp = self.options.hooks.on_fmt_terminal({
+                name = name,
+                path = info.path,
+                pid = pid,
+                term_id = term_id,
+                term = info.terminal,
+            })
+            if type(tmp) == "table" and tmp.name then
+                name = tmp.name
+                pid = tmp.pid
+                term_id = tmp.term_id
+            end
+        end
+    else
+        if self.options.hooks.on_fmt_filename then
+            local tmp = self.options.hooks.on_fmt_filename(name)
+            if type(tmp) == "string" then
+                name = tmp
+            end
         end
     end
 
@@ -157,8 +175,16 @@ function M:_get_name(info)
     else
         name = self:_hl(name, self.options.highlights.filename)
     end
+    table.insert(items, name)
 
-    return name
+    if self.options.terminals.show_term_id and term_id then
+        table.insert(items, self:_hl(term_id, self.options.highlights.toggleterm_id))
+    end
+    if self.options.terminals.show_pid and pid then
+        table.insert(items, self:_hl(pid, self.options.highlights.pid))
+    end
+
+    return table.concat(items, " ")
 end
 
 ---Returns a formatted symbols string based on the current buffer and path information.
@@ -167,18 +193,12 @@ end
 ---@return string
 function M:_get_symbols(info)
     local opts = self.options
-    local symbols = {}
+    if not opts.file_status then
+        return ""
+    end
 
-    if info.is_term then
-        if opts.terminals.show_term_id and info.terminal then
-            local tid = utils.fmt_number(info.terminal.id, opts.hooks.on_fmt_term_id)
-            table.insert(symbols, self:_hl(tid, opts.highlights.toggleterm_id))
-        end
-        if opts.terminals.show_pid and info.pid then
-            local pid = utils.fmt_number(info.pid, opts.hooks.on_fmt_pid)
-            table.insert(symbols, self:_hl(pid, opts.highlights.pid))
-        end
-    elseif opts.file_status then
+    local symbols = {}
+    if not info.is_term and opts.file_status then
         if opts.symbols.modified and vim.bo.modified then
             table.insert(symbols, self:_hl(opts.symbols.modified, opts.highlights.symbols))
         end
