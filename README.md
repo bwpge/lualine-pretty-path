@@ -355,3 +355,7 @@ end
 
 -- 8 -> 󰓼 8
 ```
+
+## Contributing
+
+Contributions are welcome. The best way to start is to [create an issue](https://github.com/bwpge/lualine-pretty-path/issues/new/choose) and have a discussion. This helps coordinate efforts and align expectations for all parties involved.
