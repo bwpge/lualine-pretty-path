@@ -101,9 +101,8 @@ The following are the default component options:
     hooks = {
         on_shorten_dir = nil,
         on_fmt_filename = nil,
+        on_fmt_terminal = nil,
         on_fmt_directory = nil,
-        on_fmt_pid = nil,
-        on_fmt_term_id = nil,
     },
     -- some icons may need additional padding depending on your font and terminal.
     -- refer to nvim-web-devicons for the correct key (icon):
@@ -257,11 +256,13 @@ All hooks are optional and are disabled by default.
 
 **Type:** `fun(parts: string[], ellipsis: string): string[]`
 
-**Description:** Called if `directories.shorten = true` and number of directory parts (depth) exceeds `directories.max_depth`. If this function does not return a table, default shortening logic is used. Not used if `directories.enable = false`.
+**Description:** Called if `directories.shorten = true` and number of directory parts (depth) exceeds `directories.max_depth`. If this function does not return a table, default shortening logic is used.
+
+Not used if `directories.enable = false`.
 
 > [!TIP]
 >
-> The `symbols.ellipsis` string is passed to this function so you can insert/use it where needed.
+> The `symbols.ellipsis` string is passed to this function so you can use it where needed.
 
 **Example:**
 
@@ -286,7 +287,9 @@ end
 
 **Type:** `fun(name: string): string`
 
-**Description:** Called just before the filename is highlighted. If this function does not return a string, the original filename is used.
+**Description:** Called if the buffer is a file (see: `on_fmt_terminal` for terminals).
+
+Controls how the filename is displayed. If this function does not return a string, the original filename is used.
 
 **Example:**
 
@@ -299,11 +302,48 @@ end
 -- foo.bar.txt -> foo.bar
 ```
 
+#### `on_fmt_terminal`
+
+**Type:** `fun(info: { name: string, path: string, pid?: string, term_id?: string, term?: toggleterm.Terminal }): { name: string, pid?: string, term_id?: string }`
+
+**Description:** Called if the buffer is a terminal (see `on_fmt_filename` for files).
+
+Controls how the terminal's name, PID, and terminal ID are displayed. The suggested name, original path, PID (if available), terminal ID (if available), and [`toggleterm.Terminal`](https://github.com/akinsho/toggleterm.nvim/blob/193786e0371e3286d3bc9aa0079da1cd41beaa62/lua/toggleterm/terminal.lua#L68-L95) (if available) are passed as arguments to the hook as a single table.
+
+The expected return value is a table with fields `name`, `pid` (optional), and `term_id` (optional). If this function does not return a `table` with at least a `name` field, default formatting logic is used. If `pid` and/or `term_id` are not provided by the return value, they are not displayed (prefer using `terminals.show_pid = false` or `terminals.show_term_id = false` if you never want to show them).
+
+**Example:**
+
+```lua
+-- use suggested name with a `in {terminal dir}` suffix. if in a toggleterm,
+-- show id as `TID:XXX` and hide the PID. otherwise show the pid as `PID:XXX`.
+on_fmt_terminal = function(info)
+    local cwd = vim.split(info.path, "//")[2]
+    local name = info.name .. (cwd and (" in " .. cwd) or "")
+    local term_id = info.term_id and string.format("TID:%s", info.term_id)
+    local pid = nil
+    if not info.term then
+        pid = string.format("PID:%s", info.pid)
+    end
+
+    return {
+        name = name,
+        pid = pid,
+        term_id = term_id,
+    }
+end
+
+-- toggleterm becomes: some-name in ~/foo/bar TID:1
+-- `:term` becomes:    my_shell in ~/foo/bar PID:4567
+```
+
 #### `on_fmt_directory`
 
 **Type:** `fun(parts: string[]): string[]`
 
-**Description:** Called just before the directory parts are joined with separators and highlighted. If this function does not a return a table, the original `parts` are used. Not used if `directories.enable = false`.
+**Description:** Controls how the directory parts are displayed. The input to this function is the parts that remain after processing shortening logic (see `on_shorten_dir` hook). If this function does not a return a table, the original `parts` are used.
+
+Not used if `directories.enable = false`.
 
 **Example:**
 
@@ -320,40 +360,6 @@ on_fmt_directory = function(parts)
 end
 
 -- foo-bar-baz-qux, my, dir -> foo-bar-ba…, my, dir
-```
-
-#### `on_fmt_pid`
-
-**Type:** `fun(id: number): string`
-
-**Description:** Controls how the terminal's process ID is displayed. If this function does not return a `string`, the number will be displayed with `tostring` as a fallback. Not used if `terminals.show_pid = false`.
-
-**Example:**
-
-```lua
--- show pid as `[PID:XXX]`
-on_fmt_pid = function(id)
-    return string.format("[PID:%d]", id)
-end
-
--- 1234 -> [PID:1234]
-```
-
-#### `on_fmt_term_id`
-
-**Type:** `fun(id: number): string`
-
-**Description:** Controls how a `toggleterm` ID is displayed. If this function does not return a `string`, the number will be displayed with `tostring` as a fallback. Not used if `terminals.show_term_id = false`.
-
-**Example:**
-
-```lua
--- show terminal id with a tag icon
-on_fmt_pid = function(id)
-    return "󰓼 " .. id
-end
-
--- 8 -> 󰓼 8
 ```
 
 ## Contributing
