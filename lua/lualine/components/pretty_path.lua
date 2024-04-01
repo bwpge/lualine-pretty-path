@@ -30,6 +30,7 @@ local M = lualine_require.require("lualine.component"):extend()
 ---@field unnamed? string?
 
 ---@class PrettyPath.HookOptions
+---@field on_icon_update? fun(icon?: string, hl_group?: string): string?, string?
 ---@field on_shorten_dir? fun(parts: string[], ellipsis: string): string[]
 ---@field on_fmt_filename? fun(name: string): string
 ---@field on_fmt_terminal? fun(info: { name: string, path: string, pid?: string, term_id?: string, term?: unknown }): { name: string, pid?: string, term_id?: string }
@@ -84,6 +85,7 @@ local default_options = {
         unnamed = "",
     },
     hooks = {
+        on_icon_update = nil,
         on_shorten_dir = nil,
         on_fmt_filename = nil,
         on_fmt_terminal = nil,
@@ -161,24 +163,23 @@ function M:_set_icon(info)
         return
     end
 
-    local icon, hl
-    if info.is_unnamed then
-        icon = nil
-    elseif info.is_term then
-        icon = devicons.get_icon_by_filetype("terminal")
-    else
-        icon, hl = devicons.get_icon(vim.fn.expand("%:t"))
+    local icon, hl = nil, nil
+    if not info.is_unnamed then
+        local bufname = info.is_term and "terminal" or vim.fn.expand("%:t")
+        icon, hl = devicons.get_icon(bufname)
     end
 
-    if icon then
-        local padding = self.options.icon_padding[icon] or 0
-        if padding > 0 then
-            icon = icon .. string.rep(" ", padding)
-        end
-        self.options.icon = self:_hl(icon, hl)
-    else
-        self.options.icon = nil
+    if self.options.hooks.on_icon_update then
+        icon, hl = self.options.hooks.on_icon_update(icon, hl)
     end
+
+    if not icon then
+        self.options.icon = nil
+        return
+    end
+
+    local padding = self.options.icon_padding[icon] or 0
+    self.options.icon = self:_hl(icon .. string.rep(" ", padding), hl)
 end
 
 ---Returns a formatted filename for the given path information.

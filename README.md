@@ -99,6 +99,7 @@ The following are the default component options:
     },
     -- see *hooks* section below
     hooks = {
+        on_icon_update = nil,
         on_shorten_dir = nil,
         on_fmt_filename = nil,
         on_fmt_terminal = nil,
@@ -246,13 +247,40 @@ minimal = {
 }
 ```
 
-### Hooks
+## Hooks
 
-Hooks can be used to customize how this component is rendered. Due to how `lualine` passes options to components, type hints aren't really feasible. This section provides types and examples for each hook.
+Hooks can be used to customize how this component is rendered. Due to how `lualine` passes options to components, type hints won't be available in your plugin configuration (such as through [`neodev.nvim`](https://github.com/folke/neodev.nvim)). This section provides types and examples for each hook.
 
 All hooks are optional and are disabled by default.
 
-#### `on_shorten_dir`
+### `on_icon_update`
+
+**Type:** `fun(icon?: string, hl_group?: string): string?, string?`
+
+**Description:** Called if the component icon is updated. The `icon` value passed to the hook is *before* extra padding from `icon_padding` is added. The values returned from this function are expected to be in the order `icon, hl_group` (both optional). Returning nothing (`nil`) will hide the icon, but prefer using `icon_show = false` if you never want to render the icon.
+
+Not used if `icon_show = false`.
+
+> [!NOTE]
+>
+> The input `icon` might be `nil`, such as for unnamed buffers.
+
+**Example:**
+
+```lua
+-- hide lua file icon, unset highlight used for the terminal icon
+on_icon_update = function(icon, hl_group)
+    if icon == "" then
+        return
+    end
+    if icon == "" then
+        hl_group = ""
+    end
+    return icon, hl_group
+end
+```
+
+### `on_shorten_dir`
 
 **Type:** `fun(parts: string[], ellipsis: string): string[]`
 
@@ -283,7 +311,7 @@ end
 -- X:, foo, bar, baz -> X:, f…, b…, b…
 ```
 
-#### `on_fmt_filename`
+### `on_fmt_filename`
 
 **Type:** `fun(name: string): string`
 
@@ -302,7 +330,7 @@ end
 -- foo.bar.txt -> foo.bar
 ```
 
-#### `on_fmt_terminal`
+### `on_fmt_terminal`
 
 **Type:** `fun(info: { name: string, path: string, pid?: string, term_id?: string, term?: toggleterm.Terminal }): { name: string, pid?: string, term_id?: string }`
 
@@ -334,7 +362,7 @@ end
 -- `:term` becomes:    my_shell in ~/foo/bar PID:4567
 ```
 
-#### `on_fmt_directory`
+### `on_fmt_directory`
 
 **Type:** `fun(parts: string[]): string[]`
 
