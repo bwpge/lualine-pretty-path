@@ -320,11 +320,8 @@ The expected return value is a table with fields `name`, `pid` (optional), and `
 on_fmt_terminal = function(info)
     local cwd = vim.split(info.path, "//")[2]
     local name = info.name .. (cwd and (" in " .. cwd) or "")
+    local pid = not info.term and string.format("PID:%s", info.pid)
     local term_id = info.term_id and string.format("TID:%s", info.term_id)
-    local pid = nil
-    if not info.term then
-        pid = string.format("PID:%s", info.pid)
-    end
 
     return {
         name = name,
