@@ -142,7 +142,10 @@ function M:_get_name(info)
     -- TODO: add terminal name hook
 
     if self.options.hooks.on_fmt_filename then
-        name = self.options.hooks.on_fmt_filename(name)
+        local tmp = self.options.hooks.on_fmt_filename(name)
+        if type(tmp) == "string" then
+            name = tmp
+        end
     end
 
     if vim.bo.modified then
