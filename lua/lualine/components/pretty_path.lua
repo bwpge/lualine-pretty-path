@@ -1,10 +1,10 @@
-local pretty_path = require("lualine-pretty-path")
 local utils = require("lualine-pretty-path.utils")
 local lualine_require = require("lualine_require")
 local M = lualine_require.require("lualine.component"):extend()
 
 local default_options = {
     icon_show = true,
+    use_color = true,
     path_sep = "",
     file_status = true,
     unnamed = "[No Name]",
@@ -79,15 +79,15 @@ end
 
 function M:update_status()
     local s = self.options.directories.use_absolute and ":p" or ":~:."
-    local p = pretty_path.parse_path(vim.fn.expand("%"), s)
-    if p.is_unnamed then
-        p.parts = { self.options.unnamed or "" }
+    local info = utils.parse_path(vim.fn.expand("%"), s)
+    if info.is_unnamed then
+        info.parts = { self.options.unnamed or "" }
     end
 
-    self:_set_icon(p)
-    local name = self:_get_name(p)
-    local symbols = self:_get_symbols(p)
-    local dir = self:_get_dir(p)
+    self:_set_icon(info)
+    local name = self:_get_name(info)
+    local symbols = self:_get_symbols(info)
+    local dir = self:_get_dir(info)
 
     return dir .. name .. symbols
 end
@@ -97,13 +97,16 @@ end
 ---@param hl_group? string
 ---@return string
 function M:_hl(text, hl_group)
+    if not self.options.use_color then
+        return text
+    end
     return utils.lualine_format_hl(self, text, hl_group)
 end
 
 ---Updates the component icon based on the current path information.
 ---@private
----@param p PathInfo
-function M:_set_icon(p)
+---@param info BufferInfo
+function M:_set_icon(info)
     local ok, devicons = pcall(require, "nvim-web-devicons")
     if not ok or not self.options.icon_show then
         self.options.icon = nil
@@ -111,9 +114,9 @@ function M:_set_icon(p)
     end
 
     local icon, hl
-    if p.is_unnamed then
+    if info.is_unnamed then
         icon = nil
-    elseif p.is_term then
+    elseif info.terminal then
         icon = devicons.get_icon_by_filetype("terminal")
     else
         icon, hl = devicons.get_icon(vim.fn.expand("%:t"))
@@ -132,19 +135,21 @@ end
 
 ---Returns a formatted filename for the given path information.
 ---@private
----@param p PathInfo
+---@param info BufferInfo
 ---@return string
-function M:_get_name(p)
-    local name = p.parts[#p.parts] or ""
+function M:_get_name(info)
+    local name = info.parts[#info.parts] or ""
+    -- TODO: add terminal name hook
+
     if self.options.hooks.on_fmt_filename then
         name = self.options.hooks.on_fmt_filename(name)
     end
 
     if vim.bo.modified then
         name = self:_hl(name, self.options.highlights.modified)
-    elseif p.is_unnamed then
+    elseif info.is_unnamed then
         name = self:_hl(name, self.options.highlights.unnamed)
-    elseif p.is_term then
+    elseif info.terminal then
         name = self:_hl(name, self.options.highlights.term)
     else
         name = self:_hl(name, self.options.highlights.filename)
@@ -155,19 +160,19 @@ end
 
 ---Returns a formatted symbols string based on the current buffer and path information.
 ---@private
----@param p PathInfo
+---@param info BufferInfo
 ---@return string
-function M:_get_symbols(p)
+function M:_get_symbols(info)
     local opts = self.options
     local symbols = {}
 
-    if p.is_term then
-        if opts.terminals.show_term_id and p.toggleterm_id then
-            local tid = utils.fmt_number(p.toggleterm_id, opts.hooks.on_fmt_term_id)
+    if info.is_term then
+        if opts.terminals.show_term_id and info.terminal then
+            local tid = utils.fmt_number(info.terminal.id, opts.hooks.on_fmt_term_id)
             table.insert(symbols, self:_hl(tid, opts.highlights.toggleterm_id))
         end
-        if opts.terminals.show_pid and p.pid then
-            local pid = utils.fmt_number(p.pid, opts.hooks.on_fmt_pid)
+        if opts.terminals.show_pid and info.pid then
+            local pid = utils.fmt_number(info.pid, opts.hooks.on_fmt_pid)
             table.insert(symbols, self:_hl(pid, opts.highlights.pid))
         end
     elseif opts.file_status then
@@ -188,9 +193,9 @@ end
 
 ---Returns a formatted directory for the given path information.
 ---@private
----@param p PathInfo
+---@param info BufferInfo
 ---@return string
-function M:_get_dir(p)
+function M:_get_dir(info)
     local opts = self.options
     local dir = ""
     if
@@ -200,9 +205,9 @@ function M:_get_dir(p)
         return dir
     end
 
-    local slice = { unpack(p.parts, 1, #p.parts - 1) }
+    local slice = { unpack(info.parts, 1, #info.parts - 1) }
     if opts.directories.shorten and #slice > opts.directories.max_depth then
-        local tmp = nil
+        local tmp
         if opts.hooks.on_shorten_dir then
             tmp = opts.hooks.on_shorten_dir(slice)
         end

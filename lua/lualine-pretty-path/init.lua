@@ -1,75 +1,40 @@
-local utils = require("lualine-pretty-path.utils")
-
 local M = {}
 
----@class PathInfo
----@field path string
----@field is_unnamed boolean
----@field parts table
----@field is_term boolean
----@field pid? number
----@field toggleterm_id? number
-
----@class TermInfo
----@field name string
----@field pid? number
----@field toggleterm_id? number
-
----Parses the `fname` with the given `mods` and returns `PathInfo`.
----@param fname string The filename (default: `vim.fn.expand("%")`)
----@param mods string? Modifiers passed to fnamemodify (e.g., `:~:.`)
----@return PathInfo
-function M.parse_path(fname, mods)
-    -- avoid expanding an empty filename
-    local path = #fname > 0 and vim.fn.fnamemodify(fname, mods) or ""
-    local sep = utils.path_sep
-    local is_term = false
-    local parts, pid, toggleterm_id
-
-    if path:find("^term://") then
-        local t = M.parse_term_path(path)
-        is_term = true
-        parts = { t.name }
-        pid = t.pid
-        toggleterm_id = t.toggleterm_id
-    else
-        parts = vim.split(path, sep, { trimempty = true })
-    end
-
-    local is_unnamed = #parts == 0
+---Returns components configured to produce LazyVim's lualine style.
+---@return table
+---@return table
+M.lazy_vim = function()
     return {
-        path = path,
-        is_term = is_term,
-        parts = parts,
-        is_unnamed = is_unnamed,
-        pid = pid,
-        toggleterm_id = toggleterm_id,
+        "filetype",
+        icon_only = true,
+        separator = "",
+        padding = { left = 1, right = 0 },
+    }, {
+        "pretty_path",
+        icon_show = false,
     }
 end
 
----Parses a `term://` path and returns its parts.
----@param path string
----@return TermInfo
-function M.parse_term_path(path)
-    path = vim.split(path, "//")[3] or ""
-    local pid = tonumber(path:match("^(%d+):"))
-    local toggleterm_id = tonumber(path:match("::toggleterm::(%d+)"))
+---Returns a configuration to produce a powerline or breadcrumb style path.
+M.powerline = {
+    "pretty_path",
+    path_sep = "  ",
+    highlights = {
+        path_sep = "Comment",
+    },
+}
 
-    if toggleterm_id then
-        local term = utils.get_toggleterm_by_id(toggleterm_id)
-        if term then
-            path = term:_display_name() or ""
-            path = path:gsub("::toggleterm::%d+$", "")
-        end
-    else
-        path = path:gsub("^%d+:", ""):gsub("::toggleterm::%d+", "")
-    end
-
-    return {
-        name = vim.fn.fnamemodify(path, ":t"),
-        pid = pid,
-        toggleterm_id = toggleterm_id,
-    }
-end
+---Disables all component features except the filename.
+M.minimal = {
+    "pretty_path",
+    icon_show = false,
+    use_color = false,
+    file_status = false,
+    directories = { enable = false },
+    terminals = {
+        show_pid = false,
+        show_term_id = false,
+    },
+}
 
 return M

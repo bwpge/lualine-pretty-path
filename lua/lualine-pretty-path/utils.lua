@@ -1,5 +1,15 @@
 local M = {}
 
+---@class BufferInfo
+---@field path string
+---@field parts string[]
+---@field is_unnamed boolean
+---@field is_term boolean
+---@field pid? number
+---@field terminal? table
+
+---@alias TermInfo { name: string, pid?: number, terminal?: table }
+
 M.path_sep = package.config:sub(1, 1)
 
 function M.is_readonly()
@@ -52,13 +62,70 @@ end
 
 ---Formats a number with a hook or fallback function.
 ---@param value number
----@param hook fun(id: number): string?
----@param fallback? fun(id: number): string
+---@param hook fun(id: number): string
 ---@return string
-function M.fmt_number(value, hook, fallback)
-    fallback = fallback or tostring
-    local fn = vim.F.if_nil(hook, fallback)
-    return fn(value) or fallback(value)
+function M.fmt_number(value, hook)
+    local s = hook(value)
+    if type(s) ~= "string" then
+        return tostring(value)
+    end
+    return s
 end
 
+---Parses the `fname` with the given `mods` and returns `PathInfo`.
+---@param fname string The filename (default: `vim.fn.expand("%")`)
+---@param mods string? Modifiers passed to fnamemodify (e.g., `:~:.`)
+---@return BufferInfo
+function M.parse_path(fname, mods)
+    -- avoid expanding an empty filename
+    local path = #fname > 0 and vim.fn.fnamemodify(fname, mods) or ""
+    local is_term = false
+    local parts, pid, terminal = nil, nil, nil
+
+    if path:find("^term://") then
+        local t = M.parse_term_path(path)
+        is_term = true
+        parts = { t.name }
+        pid = t.pid
+        terminal = t.terminal
+    else
+        parts = vim.split(path, M.path_sep, { trimempty = true })
+    end
+
+    local is_unnamed = #parts == 0
+    return {
+        path = path,
+        parts = parts,
+        is_unnamed = is_unnamed,
+        is_term = is_term,
+        pid = pid,
+        terminal = terminal,
+    }
+end
+
+---Parses a `term://` path and returns its parts.
+---@param path string
+---@return TermInfo
+function M.parse_term_path(path)
+    path = vim.split(path, "//")[3] or ""
+    local pid = tonumber(path:match("^(%d+):"))
+    local toggleterm_id = tonumber(path:match("::toggleterm::(%d+)"))
+    local terminal = nil
+
+    if toggleterm_id then
+        terminal = M.get_toggleterm_by_id(toggleterm_id)
+        if terminal then
+            path = terminal:_display_name() or ""
+            path = path:gsub("::toggleterm::%d+$", ""):gsub("[&;]$", "")
+        end
+    else
+        path = path:gsub("^%d+:", "")
+    end
+
+    return {
+        name = vim.fn.fnamemodify(path, ":t"),
+        pid = pid,
+        terminal = terminal,
+    }
+end
 return M
