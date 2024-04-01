@@ -284,17 +284,19 @@ end
 
 #### `on_fmt_filename`
 
-**Type:** `fun(name: string): string?`
+**Type:** `fun(name: string): string`
 
-**Description:** Called just before the filename is highlighted.
+**Description:** Called just before the filename is highlighted. If this function does not return a string, the original filename is used.
 
 **Example:**
 
 ```lua
--- convert filename to uppercase
-on_fmt_filename = string.upper
+-- remove filename extension
+on_fmt_filename = function(name)
+    return name:match("(.*)%..+$") or name
+end
 
--- foo.txt -> FOO.TXT
+-- foo.bar.txt -> foo.bar
 ```
 
 #### `on_fmt_directory`
@@ -322,7 +324,7 @@ end
 
 #### `on_fmt_pid`
 
-**Type:** `fun(id: number): string?`
+**Type:** `fun(id: number): string`
 
 **Description:** Controls how the terminal's process ID is displayed. If this function does not return a `string`, the number will be displayed with `tostring` as a fallback. Not used if `terminals.show_pid = false`.
 
@@ -339,7 +341,7 @@ end
 
 #### `on_fmt_term_id`
 
-**Type:** `fun(id: number): string?`
+**Type:** `fun(id: number): string`
 
 **Description:** Controls how a `toggleterm` ID is displayed. If this function does not return a `string`, the number will be displayed with `tostring` as a fallback. Not used if `terminals.show_term_id = false`.
 
