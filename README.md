@@ -32,12 +32,15 @@ With [`lazy.nvim`](https://github.com/folke/lazy.nvim)
         "bwpge/lualine-pretty-path",
     },
     opts = {
+        -- recommended to use this plugin in lualine_c,
+        -- see below for options
         sections = {
-            -- recommended to use this plugin in lualine_c,
-            -- see below for options
             lualine_c = { "pretty_path" }
         },
-        -- ... other lualine config
+        inactive_sections = {
+            lualine_c = { "pretty_path" }
+        }
+        -- other lualine config...
     },
 }
 ```
@@ -64,6 +67,7 @@ The following are the default component options:
 ```lua
 {
     icon_show = true, -- show the filetype icon in this component, disable if you want to use lualine's `filetype`
+    icon_show_inactive = false, -- same as above, but only affects `inactive_sections` (always disabled if icon_show = false)
     use_color = true, -- whether or not to apply highlights to the component, use false to disable all color
     path_sep = "", -- path separator for styling output (doesn't affect buffer path)
     file_status = true, -- whether or not to indicate file status with symbols
@@ -243,6 +247,72 @@ minimal = {
     terminals = {
         show_pid = false,
         show_term_id = false,
+    },
+}
+```
+
+### Inactive Mode
+
+This component can be used in `inactive_sections` to replace the default filename component.
+
+When inactive (`is_focused = false`), highlights are disabled. This will use the `lualine` default text color for inactive components in whatever section this is set to.
+
+This is a completely separate configuration, and so it requires specifying all of your options again if you want identical components for active and inactive modes. While this might be a bit annoying if you want to use the same configuration, it allows for rendering different versions for active/inactive modes.
+
+One way to use the same config is by extracting the table to a variable:
+
+```lua
+local pretty_path = {
+    "pretty_path",
+    icon_show = false,
+    directories = { shorten = false },
+    terminals = { show_pid = false },
+    -- ...
+}
+
+return {
+    "nvim-lualine/lualine.nvim",
+    dependencies = {
+        "nvim-tree/nvim-web-devicons",
+        "bwpge/lualine-pretty-path",
+    },
+    opts = {
+        sections = {
+            lualine_c = { pretty_path }
+        },
+        inactive_sections = {
+            lualine_c = { pretty_path }
+        },
+    },
+}
+```
+
+Conversely, you might want completely different styles for active/inactive:
+
+```lua
+return {
+    "nvim-lualine/lualine.nvim",
+    dependencies = {
+        "nvim-tree/nvim-web-devicons",
+        "bwpge/lualine-pretty-path",
+    },
+    opts = {
+        sections = {
+            -- use default for active
+            lualine_c = { "pretty_path" }
+        },
+        inactive_sections = {
+            -- use absolute path with no shortening for inactive
+            lualine_c = {
+                {
+                    "pretty_path",
+                    directories = {
+                        shorten = false,
+                        use_absolute = true,
+                    },
+                },
+            },
+        },
     },
 }
 ```
