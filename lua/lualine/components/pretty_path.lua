@@ -298,7 +298,7 @@ function M:_get_dir(info)
         slice = tmp
     end
 
-    if #slice > 1 then
+    if #slice > 0 then
         local sep = opts.path_sep
         if #opts.highlights.path_sep > 0 then
             sep = self:_hl(sep, opts.highlights.path_sep)
