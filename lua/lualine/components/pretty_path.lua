@@ -39,6 +39,7 @@ local M = lualine_require.require("lualine.component"):extend()
 ---@class PrettyPath.Options
 ---@field icon string?
 ---@field icon_show boolean
+---@field icon_show_inactive boolean
 ---@field use_color boolean
 ---@field path_sep string
 ---@field file_status boolean
@@ -53,6 +54,7 @@ local M = lualine_require.require("lualine.component"):extend()
 ---@type PrettyPath.Options
 local default_options = {
     icon_show = true,
+    icon_show_inactive = false,
     use_color = true,
     path_sep = "",
     file_status = true,
@@ -127,7 +129,8 @@ function M:init(options)
     end
 end
 
-function M:update_status()
+function M:update_status(is_focused)
+    self.is_focused = is_focused
     local mods = self.options.directories.use_absolute and ":p" or ":~:."
     local info = utils.parse_path(vim.fn.expand("%"), mods)
     if info.is_unnamed then
@@ -147,7 +150,7 @@ end
 ---@param hl_group? string
 ---@return string
 function M:_hl(text, hl_group)
-    if not self.options.use_color then
+    if not self.options.use_color or not self.is_focused then
         return text
     end
     return utils.lualine_format_hl(self, text, hl_group)
@@ -158,7 +161,11 @@ end
 ---@param info PerttyPath.BufferInfo
 function M:_set_icon(info)
     local ok, devicons = pcall(require, "nvim-web-devicons")
-    if not ok or not self.options.icon_show then
+    if
+        not ok
+        or not self.options.icon_show
+        or not (self.is_focused or self.options.icon_show_inactive)
+    then
         self.options.icon = nil
         return
     end
