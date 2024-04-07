@@ -1,33 +1,20 @@
 local utils = require("lualine-pretty-path.utils")
+local default_provider = require("lualine-pretty-path.providers.base")
+-- TODO: why do we need lualine_require?
 local lualine_require = require("lualine_require")
 local M = lualine_require.require("lualine.component"):extend()
 
 ---@class PrettyPath.SymbolOptions
 ---@field modified string
 ---@field readonly string
+---@field newfile string
 ---@field ellipsis string
 
 ---@class PrettyPath.DirectoryOptions
 ---@field enable boolean
 ---@field shorten boolean
 ---@field exclude_filetypes string[]
----@field use_absolute boolean
 ---@field max_depth number
-
----@class PrettyPath.TerminalOptions
----@field show_pid boolean
----@field show_term_id boolean
-
----@class PrettyPath.HighlightOptions
----@field directory? string?
----@field filename? string?
----@field modified? string?
----@field path_sep? string?
----@field pid? string?
----@field symbols? string?
----@field term? string?
----@field toggleterm_id? string?
----@field unnamed? string?
 
 ---@class PrettyPath.HookOptions
 ---@field on_icon_update? fun(icon?: string, hl_group?: string): string?, string?
@@ -36,49 +23,50 @@ local M = lualine_require.require("lualine.component"):extend()
 ---@field on_fmt_terminal? fun(info: { name: string, path: string, pid?: string, term_id?: string, term?: unknown }): { name: string, pid?: string, term_id?: string }
 ---@field on_fmt_directory? fun(parts: string[]): string[]
 
+---@alias PrettyPath.ProviderOption { value: PrettyPath.Provider, cond: fun(path: string): boolean }
+
 ---@class PrettyPath.Options
 ---@field icon string?
 ---@field icon_show boolean
 ---@field icon_show_inactive boolean
 ---@field use_color boolean
+---@field use_absolute boolean
 ---@field path_sep string
 ---@field file_status boolean
 ---@field unnamed string
 ---@field symbols PrettyPath.SymbolOptions
 ---@field directories PrettyPath.DirectoryOptions
----@field terminals PrettyPath.TerminalOptions
----@field highlights PrettyPath.HighlightOptions
----@field hooks PrettyPath.HookOptions
+---@field highlights table<string, string?>
 ---@field icon_padding table<string, number>
+---@field providers { default: PrettyPath.Provider?, [number]: PrettyPath.ProviderOption?  }
 
 ---@type PrettyPath.Options
 local default_options = {
     icon_show = true,
     icon_show_inactive = false,
     use_color = true,
+    use_absolute = false,
     path_sep = "",
     file_status = true,
     unnamed = "[No Name]",
     symbols = {
         modified = "",
         readonly = "",
+        newfile = "",
         ellipsis = "…",
     },
     directories = {
         enable = true,
         shorten = true,
         exclude_filetypes = { "help" },
-        use_absolute = false,
         max_depth = 2,
-    },
-    terminals = {
-        show_pid = true,
-        show_term_id = true,
     },
     highlights = {
         directory = "",
         filename = "Bold",
+        fugitive_id = "Number",
         modified = "MatchParen",
+        newfile = "Special",
         path_sep = "",
         pid = "Comment",
         symbols = "",
@@ -86,38 +74,62 @@ local default_options = {
         toggleterm_id = "Number",
         unnamed = "",
     },
-    hooks = {
-        on_icon_update = nil,
-        on_shorten_dir = nil,
-        on_fmt_filename = nil,
-        on_fmt_terminal = nil,
-        on_fmt_directory = nil,
-    },
     icon_padding = {
         [""] = 1,
+    },
+    -- TODO: using an array makes it hard for the user to keep defaults and replace 1 or 2 items.
+    -- we should have an easier way for them to build/modify the default list.
+    providers = {
+        {
+            value = require("lualine-pretty-path.providers.fugitive"),
+            cond = function(path)
+                return vim.bo.filetype == "fugitive" or path:match("^fugitive:")
+            end,
+        },
+        {
+            value = require("lualine-pretty-path.providers.help"),
+            cond = function()
+                return vim.bo.filetype == "help"
+            end,
+        },
+        {
+            value = require("lualine-pretty-path.providers.toggleterm"),
+            cond = function(path)
+                return path:match("::toggleterm::") and vim.bo.buftype == "terminal"
+            end,
+        },
+        {
+            value = require("lualine-pretty-path.providers.terminal"),
+            cond = function()
+                return vim.bo.buftype == "terminal"
+            end,
+        },
     },
 }
 
 function M:init(options)
     M.super.init(self, options)
-    self.options = vim.tbl_deep_extend("keep", self.options or {}, default_options) --[[@as PrettyPath.Options]]
+    ---@type PrettyPath.Options
+    self.options = vim.tbl_deep_extend("keep", self.options or {}, default_options)
 
-    if self.options.symbols.modified == "" then
-        self.options.symbols.modified = nil
+    -- TODO: clean up default options. decide if we want to use empty strings or nils
+    for k, v in pairs(self.options.symbols) do
+        if v == "" then
+            self.options.symbols[k] = nil
+        end
     end
-    if self.options.symbols.readonly == "" then
-        self.options.symbols.readonly = nil
+    if not self.options.symbols.ellipsis then
+        self.options.symbols.ellipsis = "…"
     end
     if self.options.path_sep == "" then
         self.options.path_sep = utils.path_sep
     end
 
-    -- unset invalid hooks
-    for key, hook in pairs(self.options.hooks) do
-        if type(hook) ~= "function" then
-            self.options.hooks[key] = nil
-        end
+    -- providers array needs to be overwritten entirely
+    if options.providers then
+        self.options.providers = options.providers
     end
+    self._default_provider = self.options.providers.default or default_provider
 
     -- create highlight groups
     for key, hl in pairs(self.options.highlights) do
@@ -129,20 +141,46 @@ function M:init(options)
     end
 end
 
-function M:update_status(is_focused)
-    self.is_focused = is_focused
-    local mods = self.options.directories.use_absolute and ":p" or ":~:."
-    local info = utils.parse_path(vim.fn.expand("%"), mods)
-    if info.is_unnamed then
-        info.parts = { self.options.unnamed or "" }
+---@param path string
+---@return PrettyPath.Provider
+function M:get_provider(path)
+    for _, item in ipairs(self.options.providers) do
+        if item.cond(path) == true then
+            return item.value
+        end
     end
 
-    self:_set_icon(info)
-    local name = self:_get_name(info)
-    local symbols = self:_get_symbols(info)
-    local dir = self:_get_dir(info)
+    return self._default_provider
+end
 
-    return dir .. name .. symbols
+local function make_hl_fn(self)
+    return function(text, group)
+        return self:_hl(text, group)
+    end
+end
+
+---@param is_focused boolean
+---@return string?
+function M:update_status(is_focused)
+    self.is_focused = is_focused
+    local path = vim.fn.expand(self.options.use_absolute and "%:p" or "%:~:.")
+    local provider = self:get_provider(path)
+    local hl_fn = make_hl_fn(self)
+
+    local p = provider:new(path, is_focused, hl_fn, self.options)
+    if
+        not self.options.icon_show
+        or not (self.is_focused or self.options.icon_show_inactive)
+        or #p.icon == 0
+    then
+        self.icon = nil
+    else
+        local icon = p.icon[1]
+        local padding = self.options.icon_padding[icon] or 0
+        self.options.icon = self:_hl(icon .. string.rep(" ", padding), p.icon[2])
+    end
+
+    return p:render()
 end
 
 ---@private
@@ -154,175 +192,6 @@ function M:_hl(text, hl_group)
         return text
     end
     return utils.lualine_format_hl(self, text, hl_group)
-end
-
----Updates the component icon based on the current path information.
----@private
----@param info PerttyPath.BufferInfo
-function M:_set_icon(info)
-    local ok, devicons = pcall(require, "nvim-web-devicons")
-    if
-        not ok
-        or not self.options.icon_show
-        or not (self.is_focused or self.options.icon_show_inactive)
-    then
-        self.options.icon = nil
-        return
-    end
-
-    local icon, hl = nil, nil
-    if not info.is_unnamed then
-        local bufname = info.is_term and "terminal" or vim.fn.expand("%:t")
-        icon, hl = devicons.get_icon(bufname)
-    end
-
-    if self.options.hooks.on_icon_update then
-        icon, hl = self.options.hooks.on_icon_update(icon, hl)
-    end
-
-    if not icon then
-        self.options.icon = nil
-        return
-    end
-
-    local padding = self.options.icon_padding[icon] or 0
-    self.options.icon = self:_hl(icon .. string.rep(" ", padding), hl)
-end
-
----Returns a formatted filename for the given path information.
----@private
----@param info PerttyPath.BufferInfo
----@return string
-function M:_get_name(info)
-    local items = {}
-    local name = info.parts[#info.parts] or ""
-    local pid = info.pid
-    local term_id = info.terminal and tostring(info.terminal.id)
-
-    if info.is_term then
-        if self.options.hooks.on_fmt_terminal then
-            local tmp = self.options.hooks.on_fmt_terminal({
-                name = name,
-                path = info.path,
-                pid = pid,
-                term_id = term_id,
-                term = info.terminal,
-            })
-            if type(tmp) == "table" and tmp.name then
-                name = tmp.name
-                pid = tmp.pid
-                term_id = tmp.term_id
-            end
-        end
-    else
-        if self.options.hooks.on_fmt_filename then
-            local tmp = self.options.hooks.on_fmt_filename(name)
-            if type(tmp) == "string" then
-                name = tmp
-            end
-        end
-    end
-
-    if vim.bo.modified then
-        name = self:_hl(name, self.options.highlights.modified)
-    elseif info.is_unnamed then
-        name = self:_hl(name, self.options.highlights.unnamed)
-    elseif info.terminal then
-        name = self:_hl(name, self.options.highlights.term)
-    else
-        name = self:_hl(name, self.options.highlights.filename)
-    end
-    table.insert(items, name)
-
-    if self.options.terminals.show_term_id and term_id then
-        table.insert(items, self:_hl(term_id, self.options.highlights.toggleterm_id))
-    end
-    if self.options.terminals.show_pid and pid then
-        table.insert(items, self:_hl(pid, self.options.highlights.pid))
-    end
-
-    return table.concat(items, " ")
-end
-
----Returns a formatted symbols string based on the current buffer and path information.
----@private
----@param info PerttyPath.BufferInfo
----@return string
-function M:_get_symbols(info)
-    local opts = self.options
-    if not opts.file_status then
-        return ""
-    end
-
-    local symbols = {}
-    if not info.is_term and opts.file_status then
-        if opts.symbols.modified and vim.bo.modified then
-            table.insert(symbols, self:_hl(opts.symbols.modified, opts.highlights.symbols))
-        end
-        if opts.symbols.readonly and utils.is_readonly() then
-            table.insert(symbols, self:_hl(opts.symbols.readonly, opts.highlights.symbols))
-        end
-    end
-
-    if #symbols > 0 then
-        return " " .. table.concat(symbols, " ")
-    else
-        return ""
-    end
-end
-
----Returns a formatted directory for the given path information.
----@private
----@param info PerttyPath.BufferInfo
----@return string
-function M:_get_dir(info)
-    local opts = self.options
-    local dir = ""
-    if
-        not opts.directories.enable
-        or vim.tbl_contains(opts.directories.exclude_filetypes, vim.bo.filetype)
-    then
-        return dir
-    end
-
-    local slice = { unpack(info.parts, 1, #info.parts - 1) }
-    if opts.directories.shorten and #slice > opts.directories.max_depth then
-        local ellipsis = opts.symbols.ellipsis
-        local tmp = nil
-
-        if opts.hooks.on_shorten_dir then
-            tmp = opts.hooks.on_shorten_dir(slice, ellipsis)
-        end
-        if type(tmp) ~= "table" then
-            if #slice == 1 then
-                tmp = slice
-            elseif #slice == 2 then
-                tmp = { slice[1], ellipsis }
-            else
-                tmp = { slice[1], ellipsis, slice[#slice] }
-            end
-        end
-        slice = tmp
-    end
-
-    if #slice > 0 then
-        local sep = opts.path_sep
-        if #opts.highlights.path_sep > 0 then
-            sep = self:_hl(sep, opts.highlights.path_sep)
-        end
-
-        if opts.hooks.on_fmt_directory then
-            local tmp = opts.hooks.on_fmt_directory(slice)
-            if type(tmp) == "table" then
-                slice = tmp
-            end
-        end
-
-        dir = table.concat(slice, sep)
-        dir = self:_hl(dir .. sep, opts.highlights.directory)
-    end
-
-    return dir
 end
 
 return M
