@@ -7,7 +7,9 @@ local M = require("lualine-pretty-path.providers.base"):extend()
 function M:format_path(path)
     local p = vim.split(path, self.path_sep .. self.path_sep)[3] or ""
     local id = p:match("^%d+")
-    if id then
+
+    -- avoid mistaking object hashes for an id
+    if self:is_diff() and id then
         self.id = id
         p = p:gsub("^%d+" .. self.path_sep, "")
     end
@@ -24,6 +26,14 @@ function M:extract_scheme() end
 function M:get_icon()
     local name = self:is_diff() and "diff" or "git"
     return { utils.get_icon(name) }
+end
+
+function M:render_name()
+    if self.name and #self.name == 40 and self.name:match("^[%a%d]+$") then
+        return self.hl(self.name, "fugitiveHash")
+    end
+
+    return self.super.render_name(self)
 end
 
 function M:render()

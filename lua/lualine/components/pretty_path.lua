@@ -83,7 +83,7 @@ local default_options = {
         {
             value = require("lualine-pretty-path.providers.fugitive"),
             cond = function(path)
-                return vim.bo.filetype == "fugitive" or path:match("^fugitive:")
+                return vim.bo.filetype == "fugitive" or path:match("^fugitive:") ~= nil
             end,
         },
         {
