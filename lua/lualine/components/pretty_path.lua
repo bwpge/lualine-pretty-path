@@ -1,8 +1,5 @@
 local utils = require("lualine-pretty-path.utils")
-local default_provider = require("lualine-pretty-path.providers.base")
--- TODO: why do we need lualine_require?
-local lualine_require = require("lualine_require")
-local M = lualine_require.require("lualine.component"):extend()
+local M = require("lualine.component"):extend()
 
 ---@class PrettyPath.SymbolOptions
 ---@field modified string
@@ -23,8 +20,6 @@ local M = lualine_require.require("lualine.component"):extend()
 ---@field on_fmt_terminal? fun(info: { name: string, path: string, pid?: string, term_id?: string, term?: unknown }): { name: string, pid?: string, term_id?: string }
 ---@field on_fmt_directory? fun(parts: string[]): string[]
 
----@alias PrettyPath.ProviderOption { value: PrettyPath.Provider, cond: fun(path: string): boolean }
-
 ---@class PrettyPath.Options
 ---@field icon string?
 ---@field icon_show boolean
@@ -38,7 +33,7 @@ local M = lualine_require.require("lualine.component"):extend()
 ---@field directories PrettyPath.DirectoryOptions
 ---@field highlights table<string, string?>
 ---@field icon_padding table<string, number>
----@field providers { default: PrettyPath.Provider?, [number]: PrettyPath.ProviderOption?  }
+---@field providers { default: PrettyPath.Provider?, [number]: PrettyPath.Provider?  }
 
 ---@type PrettyPath.Options
 local default_options = {
@@ -64,47 +59,27 @@ local default_options = {
     highlights = {
         directory = "",
         filename = "Bold",
-        fugitive_id = "Number",
+        id = "Number",
         modified = "MatchParen",
         newfile = "Special",
         path_sep = "",
-        pid = "Comment",
         symbols = "",
         term = "Bold",
-        toggleterm_id = "Number",
         unnamed = "",
+        verbose = "Comment",
     },
     icon_padding = {
         [""] = 1,
     },
-    -- TODO: using an array makes it hard for the user to keep defaults and replace 1 or 2 items.
-    -- we should have an easier way for them to build/modify the default list.
-    providers = {
-        {
-            value = require("lualine-pretty-path.providers.fugitive"),
-            cond = function(path)
-                return vim.bo.filetype == "fugitive" or path:match("^fugitive:") ~= nil
-            end,
-        },
-        {
-            value = require("lualine-pretty-path.providers.help"),
-            cond = function()
-                return vim.bo.filetype == "help"
-            end,
-        },
-        {
-            value = require("lualine-pretty-path.providers.toggleterm"),
-            cond = function(path)
-                return path:match("::toggleterm::") and vim.bo.buftype == "terminal"
-            end,
-        },
-        {
-            value = require("lualine-pretty-path.providers.terminal"),
-            cond = function()
-                return vim.bo.buftype == "terminal"
-            end,
-        },
-    },
+    providers = {},
+}
+
+local default_provider = require("lualine-pretty-path.providers.base")
+local builtin_providers = {
+    require("lualine-pretty-path.providers.fugitive"),
+    require("lualine-pretty-path.providers.help"),
+    require("lualine-pretty-path.providers.toggleterm"),
+    require("lualine-pretty-path.providers.terminal"),
 }
 
 function M:init(options)
@@ -125,10 +100,6 @@ function M:init(options)
         self.options.path_sep = utils.path_sep
     end
 
-    -- providers array needs to be overwritten entirely
-    if options.providers then
-        self.options.providers = options.providers
-    end
     self._default_provider = self.options.providers.default or default_provider
 
     -- create highlight groups
@@ -144,9 +115,11 @@ end
 ---@param path string
 ---@return PrettyPath.Provider
 function M:get_provider(path)
-    for _, item in ipairs(self.options.providers) do
-        if item.cond(path) == true then
-            return item.value
+    for _, list in ipairs({ self.options.providers, builtin_providers }) do
+        for _, item in ipairs(list) do
+            if item and item.can_handle(path) then
+                return item
+            end
         end
     end
 

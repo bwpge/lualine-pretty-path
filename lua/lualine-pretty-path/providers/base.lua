@@ -29,6 +29,8 @@ local utils = require("lualine-pretty-path.utils")
 local M = require("lualine.utils.class"):extend()
 
 ---Initializes the provider and parses the input path.
+---
+---This method should not be overridden.
 ---@param path string
 ---@param is_focused boolean
 ---@param hl PrettyPath.HlFunc
@@ -40,6 +42,20 @@ function M:init(path, is_focused, hl, opts)
     self.opts = opts
     self.path = self:format_path(path)
     self:parse()
+end
+
+---A class function that returns whether or not this provider can handle the current buffer.
+---
+---This is called when the plugin is looking for a provider to render the component. When extending,
+---providers **must** override this function.
+---
+---**IMPORTANT:** Note that this function uses a period (`.`) not a colon (`:`). This is a class
+---**function**, not a method. There is no `self` parameter, so this function cannot access any
+---instance methods or fields.
+---@param _ string
+---@return boolean
+function M.can_handle(_)
+    error("`can_handle` must be implemented by extension providers", 2)
 end
 
 ---Formats or pre-processes the `path`, such as removing prefixes or ID numbers.

@@ -4,6 +4,10 @@ local utils = require("lualine-pretty-path.utils")
 ---@field super PrettyPath.Provider
 local M = require("lualine-pretty-path.providers.base"):extend()
 
+function M.can_handle()
+    return vim.bo.buftype == "terminal"
+end
+
 function M:format_path(path)
     local p = vim.split(path, "//")[3] or ""
     local pid = p:match("^%d+")
@@ -27,7 +31,7 @@ end
 
 function M:render_extra()
     if self.pid then
-        return " " .. self.hl(self.pid, self.opts.highlights.pid)
+        return " " .. self.hl(self.pid, self.opts.highlights.verbose)
     end
 end
 

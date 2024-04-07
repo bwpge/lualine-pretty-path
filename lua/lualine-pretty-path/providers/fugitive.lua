@@ -4,6 +4,10 @@ local utils = require("lualine-pretty-path.utils")
 ---@field super PrettyPath.Provider
 local M = require("lualine-pretty-path.providers.base"):extend()
 
+function M.can_handle(path)
+    return path:match("^fugitive:") ~= nil or vim.bo.filetype == "fugitive"
+end
+
 function M:format_path(path)
     local p = vim.split(path, self.path_sep .. self.path_sep)[3] or ""
     local id = p:match("^%d+")
@@ -43,7 +47,7 @@ function M:render()
 
     local status = M.super.render(self)
     if self.id then
-        status = status .. " " .. self.hl(self.id, self.opts.highlights.fugitive_id)
+        status = status .. " " .. self.hl(self.id, self.opts.highlights.id)
     end
     return status
 end
