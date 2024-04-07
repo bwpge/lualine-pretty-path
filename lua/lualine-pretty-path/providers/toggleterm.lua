@@ -17,6 +17,19 @@ function M:format_path(path)
     return p
 end
 
+function M:extract_name()
+    if package.loaded.toggleterm then
+        if self.tid then
+            local term = require("toggleterm.terminal").get(tonumber(self.tid))
+            if term then
+                return term:_display_name()
+            end
+        end
+    end
+
+    return self.super.extract_name(self)
+end
+
 function M:render_extra()
     local ids = {}
     if self.tid then
