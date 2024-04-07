@@ -145,9 +145,9 @@ function M:update_status(is_focused)
     if
         not self.options.icon_show
         or not (self.is_focused or self.options.icon_show_inactive)
-        or #p.icon == 0
+        or not p.icon[1]
     then
-        self.icon = nil
+        self.options.icon = nil
     else
         local icon = p.icon[1]
         local padding = self.options.icon_padding[icon] or 0

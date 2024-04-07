@@ -10,10 +10,10 @@ end
 
 function M:format_path(path)
     local p = vim.split(path, self.path_sep .. self.path_sep)[3] or ""
-    local id = p:match("^%d+")
+    local id = p:match("^(%d+)" .. self.path_sep)
 
     -- avoid mistaking object hashes for an id
-    if self:is_diff() and id then
+    if id then
         self.id = id
         p = p:gsub("^%d+" .. self.path_sep, "")
     end
