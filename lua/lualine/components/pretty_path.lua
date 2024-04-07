@@ -100,6 +100,7 @@ function M:init(options)
         self.options.path_sep = utils.path_sep
     end
 
+    self.options.providers = utils.resolve_providers(self.options.providers)
     self._default_provider = self.options.providers.default or default_provider
 
     -- create highlight groups

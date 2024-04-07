@@ -47,4 +47,40 @@ function M.get_icon(s)
     return icons.get_icon(s)
 end
 
+local function require_provider(item)
+    if type(item) == "string" then
+        local ok, p = pcall(require, "lualine-pretty-path.providers." .. item)
+        if ok and type(p) == "table" then
+            return p
+        end
+
+        vim.notify(
+            "Unknown provider `" .. item .. "`",
+            vim.log.levels.WARN,
+            { title = "pretty-path" }
+        )
+        return p
+    elseif type(item) ~= "table" then
+        vim.notify(
+            "Provider must be a table or string value (got " .. type(item) .. ")",
+            vim.log.levels.WARN,
+            { title = "pretty-path" }
+        )
+    end
+end
+
+function M.resolve_providers(list)
+    for i, item in ipairs(list) do
+        list[i] = require_provider(item)
+    end
+
+    if list.default then
+        list.default = require_provider(list.default)
+    end
+
+    return vim.tbl_filter(function(x)
+        return x ~= nil
+    end, list)
+end
+
 return M
