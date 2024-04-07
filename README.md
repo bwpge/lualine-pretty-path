@@ -69,45 +69,35 @@ The following are the default component options:
     icon_show = true, -- show the filetype icon in this component, disable if you want to use lualine's `filetype`
     icon_show_inactive = false, -- same as above, but only affects `inactive_sections` (always disabled if icon_show = false)
     use_color = true, -- whether or not to apply highlights to the component, use false to disable all color
+    use_absolute = false, -- pass absolute paths to providers
     path_sep = "", -- path separator for styling output (doesn't affect buffer path)
     file_status = true, -- whether or not to indicate file status with symbols
     unnamed = "[No Name]", -- label for unnamed buffers
     symbols = {
         modified = "", -- somewhat redundant if using modified highlight
         readonly = "",
+        newfile = "", -- somewhat redundant if using newfile highlight
         ellipsis = "…", -- used between shortened directory parts
     },
     directories = {
         enable = true, -- show directory in component
         shorten = true, -- whether or not to shorten directories, see max_depth
         exclude_filetypes = { "help" }, -- do not show directory for these filetypes
-        use_absolute = false, -- use absolute path for directory
         max_depth = 2, -- maximum depth allowed before shortening, ignored if shorten = false
-    },
-    terminals = {
-        show_pid = true, -- display the process id in a terminal buffer
-        show_term_id = true, -- display the terminal id for toggleterm windows
     },
     -- highlights can be a string for copying existing styles, or table to create a new one.
     -- empty string implies default lualine section style.
     highlights = {
         directory = "", -- the directory portion of the component
         filename = "Bold", -- the filename portion of the component
+        id = "Number", -- various id numbers like toggleterm id, diff files, etc.
         modified = "MatchParen", -- filename highlight if it is modified
+        newfile = "Special", -- highlight if the buffer is new
         path_sep = "", -- highlight for path separator, uses `directory` if empty string
-        pid = "Comment", -- the process id in a terminal window
         symbols = "", -- the symbols at the end of the component
         term = "Bold", -- highlight if the buffer is a terminal
-        toggleterm_id = "Number", -- terminal id if in a toggleterm window
         unnamed = "", -- highlight if the buffer is unnamed
-    },
-    -- see *hooks* section below
-    hooks = {
-        on_icon_update = nil,
-        on_shorten_dir = nil,
-        on_fmt_filename = nil,
-        on_fmt_terminal = nil,
-        on_fmt_directory = nil,
+        verbose = "Comment", -- verbose information like terminal PID's
     },
     -- some icons may need additional padding depending on your font and terminal.
     -- refer to nvim-web-devicons for the correct key (icon):
@@ -115,6 +105,7 @@ The following are the default component options:
     icon_padding = {
         [""] = 1, -- value here adds *additional* spaces (use 0 or negative to disable)
     },
+    providers = {}, -- see *providers* section
 }
 ```
 
@@ -251,7 +242,7 @@ minimal = {
 }
 ```
 
-### Inactive Mode
+### Inactive Section
 
 This component can be used in `inactive_sections` to replace the default filename component.
 
@@ -266,7 +257,6 @@ local pretty_path = {
     "pretty_path",
     icon_show = false,
     directories = { shorten = false },
-    terminals = { show_pid = false },
     -- ...
 }
 
@@ -317,145 +307,93 @@ return {
 }
 ```
 
-## Hooks
+## Providers
 
-Hooks can be used to customize how this component is rendered. Due to how `lualine` passes options to components, type hints won't be available in your plugin configuration (such as through [`neodev.nvim`](https://github.com/folke/neodev.nvim)). This section provides types and examples for each hook.
+This plugin uses the concept of *providers* to parse and render the component content. This allows reusing and extending logic for specialized buffers (e.g., terminals, plugin buffers like `vim-fugitive`, etc.).
 
-All hooks are optional and are disabled by default.
+The `base` provider (`lualine-pretty-path.providers.base`) is implemented to be as flexible as possible, and easy to override small, logical chunks. The `extend` method allows one to inherit all the logic of the provider and customize certain parts.
 
-### `on_icon_update`
-
-**Type:** `fun(icon?: string, hl_group?: string): string?, string?`
-
-**Description:** Called if the component icon is updated. The `icon` value passed to the hook is *before* extra padding from `icon_padding` is added. The values returned from this function are expected to be in the order `icon, hl_group` (both optional). Returning nothing (`nil`) will hide the icon, but prefer using `icon_show = false` if you never want to render the icon.
-
-Not used if `icon_show = false`.
-
-> [!NOTE]
->
-> The input `icon` might be `nil`, such as for unnamed buffers.
-
-**Example:**
+For an easy example, take a look at the `help` provider:
 
 ```lua
--- hide lua file icon, unset highlight used for the terminal icon
-on_icon_update = function(icon, hl_group)
-    if icon == "" then
-        return
+---@class PrettyPath.HelpProvider: PrettyPath.Provider
+---@field super PrettyPath.Provider
+local M = require("lualine-pretty-path.providers.base"):extend()
+
+function M.can_handle()
+    return vim.bo.filetype == "help"
+end
+
+function M:get_icon()
+    local icon = self.super.get_icon(self)
+    if icon[1] then
+        icon[1] = "󰋖"
     end
-    if icon == "" then
-        hl_group = ""
-    end
-    return icon, hl_group
+
+    return icon
 end
+
+return M
 ```
 
-### `on_shorten_dir`
+This provider mostly relies on the `base` implementation, but overrides the `get_icon` method to change the icon returned (if `base` could find one). The `can_handle` function (not method) is required to be implemented by all extensions from `base`.
 
-**Type:** `fun(parts: string[], ellipsis: string): string[]`
-
-**Description:** Called if `directories.shorten = true` and number of directory parts (depth) exceeds `directories.max_depth`. If this function does not return a table, default shortening logic is used.
-
-Not used if `directories.enable = false`.
-
-> [!TIP]
+> [!IMPORTANT]
 >
-> The `symbols.ellipsis` string is passed to this function so you can use it where needed.
+> Note the call to `super` with `self.super.get_icon(self)`. This indexes the provider that was extended (`base`), calls the method `get_icon`, using the current provider object (`help`) as the `self` argument. This is a quirk of how `lualine` implements class/inheritance logic in Lua. If `super` methods are not called this way, you will get a bunch of cryptic errors about indexing `nil` fields.
 
-**Example:**
+### Selecting Providers
 
-```lua
--- use all directory parts, but only take first letter of each, followed by
--- the ellipsis string. preserve partition on windows with absolute paths.
-on_shorten_dir = function(parts, ellipsis)
-    return vim.tbl_map(function(x)
-        if x:match("^%a:$") then
-            return x
-        else
-            return x:sub(1, 1) .. ellipsis
-        end
-    end, parts)
-end
-
--- foo, bar, baz -> f…, b…, b…
--- X:, foo, bar, baz -> X:, f…, b…, b…
-```
-
-### `on_fmt_filename`
-
-**Type:** `fun(name: string): string`
-
-**Description:** Called if the buffer is a file (see: `on_fmt_terminal` for terminals).
-
-Controls how the filename is displayed. If this function does not return a string, the original filename is used.
-
-**Example:**
+The provider selection order is based on `options.providers`. The builtin list is equivalent to:
 
 ```lua
--- remove filename extension
-on_fmt_filename = function(name)
-    return name:match("(.*)%..+$") or name
-end
-
--- foo.bar.txt -> foo.bar
+providers = {
+    default = "base",
+    "fugitive",
+    "help",
+    "toggleterm",
+    "terminal",
+}
 ```
 
-### `on_fmt_terminal`
+Providers can be specified by table values (e.g., `require("some.provider")`) or by strings (similar to how `lualine` requires components).
 
-**Type:** `fun(info: { name: string, path: string, pid?: string, term_id?: string, term?: toggleterm.Terminal }): { name: string, pid?: string, term_id?: string }`
+### Default Provider
 
-**Description:** Called if the buffer is a terminal (see `on_fmt_filename` for files).
-
-Controls how the terminal's name, PID, and terminal ID are displayed. The suggested name, original path, PID (if available), terminal ID (if available), and [`toggleterm.Terminal`](https://github.com/akinsho/toggleterm.nvim/blob/193786e0371e3286d3bc9aa0079da1cd41beaa62/lua/toggleterm/terminal.lua#L68-L95) (if available) are passed as arguments to the hook as a single table.
-
-The expected return value is a table with fields `name`, `pid` (optional), and `term_id` (optional). If this function does not return a `table` with at least a `name` field, default formatting logic is used. If `pid` and/or `term_id` are not provided by the return value, they are not displayed (prefer using `terminals.show_pid = false` or `terminals.show_term_id = false` if you never want to show them).
-
-**Example:**
+If no provider matches from `options.providers` or the builtin list, the default (`base`) is used. This can be overridden with the `default` field:
 
 ```lua
--- use suggested name with a `in {terminal dir}` suffix. if in a toggleterm,
--- show id as `TID:XXX` and hide the PID. otherwise show the pid as `PID:XXX`.
-on_fmt_terminal = function(info)
-    local cwd = vim.split(info.path, "//")[2]
-    local name = info.name .. (cwd and (" in " .. cwd) or "")
-    local pid = not info.term and string.format("PID:%s", info.pid)
-    local term_id = info.term_id and string.format("TID:%s", info.term_id)
-
-    return {
-        name = name,
-        pid = pid,
-        term_id = term_id,
-    }
-end
-
--- toggleterm becomes: some-name in ~/foo/bar TID:1
--- `:term` becomes:    my_shell in ~/foo/bar PID:4567
+providers = {
+    default = "my_default",
+    -- ...
+}
 ```
 
-### `on_fmt_directory`
+It is recommended to put the most specific providers first in the list, to allow `can_handle` tests to fall through to more general ones.
 
-**Type:** `fun(parts: string[]): string[]`
+### Custom Providers
 
-**Description:** Controls how the directory parts are displayed. The input to this function is the parts that remain after processing shortening logic (see `on_shorten_dir` hook). If this function does not a return a table, the original `parts` are used.
+Custom providers can be extended from existing ones to reuse logic and reduce boilerplate. Refer to the [`base` provider implementation](https://github.com/bwpge/lualine-pretty-path/tree/main/lua/lualine-pretty-path/providers/base.lua) for more information.
 
-Not used if `directories.enable = false`.
-
-**Example:**
+For example, say you want to remove the PID from the `terminal` provider. You can extend it and override the `render_extra` method to return nothing, and add that to your `providers` option:
 
 ```lua
--- truncate long directory names
-on_fmt_directory = function(parts)
-    return vim.tbl_map(function(x)
-        if #x >= 10 then
-            return x:sub(1, 10) .. "…"
-        else
-            return x
-        end
-    end, parts)
-end
+local new_term_provider = require("lualine-pretty-path.providers.terminal"):extend()
+-- no need to override `can_handle`, terminal provider already does
+function new_term_provider:render_extra() end
 
--- foo-bar-baz-qux, my, dir -> foo-bar-ba…, my, dir
+-- ...
+
+lualine_c = {
+    {
+        "pretty_path"
+        providers = { new_term_provider },
+    },
+}
+
 ```
+
+The providers in your config will always take priority over the builtin ones.
 
 ## Contributing
 
