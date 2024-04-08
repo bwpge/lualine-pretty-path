@@ -80,6 +80,7 @@ local builtin_providers = {
     require("lualine-pretty-path.providers.help"),
     require("lualine-pretty-path.providers.toggleterm"),
     require("lualine-pretty-path.providers.terminal"),
+    require("lualine-pretty-path.providers.trouble"),
 }
 
 function M:init(options)
