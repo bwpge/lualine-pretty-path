@@ -13,11 +13,9 @@ First and foremost, [@folke](https://github.com/folke) deserves all credit for t
 This plugin provides a component that combines LazyVim's `pretty_path` function and lualine's `filetype` and `filename` components, with some extra logic. Features include:
 
 - Display directory and file name with highlights
-- Customize path separator for powerline or breadcrumb styles
-- Hooks for manipulating component rendering logic
-- Custom formatting and highlights for terminal process ID numbers
-- Support for [`toggleterm`](https://github.com/akinsho/toggleterm.nvim) display names and ID numbers
-- Per-icon padding to account for different fonts and terminal rendering
+- Highly configurable options including path separator, colors, symbols, and per-icon padding
+- Support for plugin-specific buffers, including [`vim-fugitive`](https://github.com/tpope/vim-fugitive), [`toggleterm`](https://github.com/akinsho/toggleterm.nvim), and [`trouble`](https://github.com/folke/trouble.nvim)
+- Easy-to-extend design for customizing every part of the component rendering process
 
 ## Installation
 
@@ -311,7 +309,7 @@ return {
 
 This plugin uses the concept of *providers* to parse and render the component content. This allows reusing and extending logic for specialized buffers (e.g., terminals, plugin buffers like `vim-fugitive`, etc.).
 
-The `base` provider (`lualine-pretty-path.providers.base`) is implemented to be as flexible as possible, and easy to override small, logical chunks. The `extend` method allows one to inherit all the logic of the provider and customize certain parts.
+The `base` provider (`lualine-pretty-path.providers.base`) is implemented to be as flexible as possible, while being easy to override small, logical chunks. The `extend` method allows one to inherit all the logic of the provider and customize certain parts.
 
 For an easy example, take a look at the `help` provider:
 
@@ -353,6 +351,7 @@ providers = {
     "help",
     "toggleterm",
     "terminal",
+    "trouble",
 }
 ```
 
