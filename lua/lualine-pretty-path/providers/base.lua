@@ -139,7 +139,7 @@ function M:shorten_dir()
     return slice
 end
 
----Returns whether or not this provider is unnamed (such as for new buffers).
+---Returns whether or not this buffer is unnamed.
 ---@return boolean
 function M:is_unnamed()
     if self.name then
@@ -148,19 +148,24 @@ function M:is_unnamed()
     return true
 end
 
----Returns whether or not this provider is readonly.
+---Returns whether or not this buffer is readonly.
 ---@return boolean
 function M:is_readonly()
     return vim.bo.modifiable == false or vim.bo.readonly == true
 end
 
----Returns whether or not this provider is a new file (such as buffers created with `:e foo.txt`).
+---Returns whether or not this buffer is new (such as buffers created with `:e foo.txt`).
+---
+---Readonly buffers are not considered "new" because they are usually special buffer types.
 ---@return boolean
 function M:is_new()
-    return self.path ~= "" and vim.bo.buftype == "" and vim.fn.filereadable(self.path) == 0
+    return not self:is_readonly()
+        and self.path ~= ""
+        and vim.bo.buftype == ""
+        and vim.fn.filereadable(self.path) == 0
 end
 
----Returns whether or not this provider is modified.
+---Returns whether or not this buffer is modified.
 ---@return boolean
 function M:is_modified()
     return vim.bo.modified
