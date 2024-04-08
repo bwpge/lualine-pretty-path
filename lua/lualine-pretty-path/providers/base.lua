@@ -106,14 +106,26 @@ function M:extract_name()
     return vim.fn.fnamemodify(self.path, ":t")
 end
 
----Returns the appropriate icon for this path.
+---Returns the appropriate icon for this buffer.
 ---
 ---This method should return an array with the form `{ icon, highlight_group }` (both can be `nil`).
 ---This method does not have to respect any user options, the decision to display the icon is made by
 ---the caller.
 ---@return { [1]: string?, [2]: string? }
 function M:get_icon()
-    return { utils.get_icon(vim.fn.expand("%:t"), vim.bo.filetype, vim.bo.buftype) }
+    local name = vim.fn.expand("%:t")
+    local ft = vim.bo.filetype
+    local bt = vim.bo.buftype
+
+    if package.loaded["nvim-web-devicons"] then
+        local custom_icons = self.opts.custom_icons
+        local item = custom_icons[name] or custom_icons[ft or ""] or custom_icons[bt or ""]
+        if item then
+            return item
+        end
+    end
+
+    return { utils.get_icon(name, vim.bo.filetype, vim.bo.buftype) }
 end
 
 ---Returns an array of shortened directory parts.

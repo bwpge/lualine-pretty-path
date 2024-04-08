@@ -6,18 +6,10 @@ function M.can_handle()
     return vim.bo.filetype == "trouble" or vim.bo.filetype == "Trouble"
 end
 
-function M:is_readonly()
-    return false
-end
+function M:render_symbols() end
 
 function M:extract_name()
     return "Trouble"
-end
-
-function M:get_icon()
-    if package.loaded["nvim-web-devicons"] then
-        return { "󰔫", "DevIconGitConfig" }
-    end
 end
 
 return M

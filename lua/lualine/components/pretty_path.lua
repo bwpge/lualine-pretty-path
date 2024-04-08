@@ -32,6 +32,7 @@ local M = require("lualine.component"):extend()
 ---@field symbols PrettyPath.SymbolOptions
 ---@field directories PrettyPath.DirectoryOptions
 ---@field highlights table<string, string?>
+---@field custom_icons table<string, string[]?>
 ---@field icon_padding table<string, number>
 ---@field providers { default: PrettyPath.Provider?, [number]: PrettyPath.Provider?  }
 
@@ -67,6 +68,12 @@ local default_options = {
         unnamed = "",
         verbose = "Comment",
     },
+    custom_icons = {
+        gitrebase = { "", "DevIconGitCommit" },
+        help = { "󰋖", "DevIconTxt" },
+        trouble = { "󰔫", "DevIconGitConfig" },
+        Trouble = { "󰔫", "DevIconGitConfig" },
+    },
     icon_padding = {
         [""] = 1,
     },
@@ -76,7 +83,6 @@ local default_options = {
 local default_provider = require("lualine-pretty-path.providers.base")
 local builtin_providers = {
     require("lualine-pretty-path.providers.fugitive"),
-    require("lualine-pretty-path.providers.help"),
     require("lualine-pretty-path.providers.toggleterm"),
     require("lualine-pretty-path.providers.terminal"),
     require("lualine-pretty-path.providers.trouble"),
