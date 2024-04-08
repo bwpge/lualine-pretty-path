@@ -37,14 +37,24 @@ end
 
 ---Returns the nvim-web-devicon and highlight for the given value, if available.
 ---@param s string
+---@param filetype string?
+---@param buftype string?
 ---@return string?, string?
-function M.get_icon(s)
+function M.get_icon(s, filetype, buftype)
     local ok, icons = pcall(require, "nvim-web-devicons")
     if not ok then
         return
     end
 
-    return icons.get_icon(s)
+    local icon, hl = icons.get_icon(s)
+    if not icon and filetype then
+        icon, hl = icons.get_icon_by_filetype(filetype)
+    end
+    if not icon and buftype then
+        icon, hl = icons.get_icon_by_filetype(buftype)
+    end
+
+    return icon, hl
 end
 
 local function require_provider(item)

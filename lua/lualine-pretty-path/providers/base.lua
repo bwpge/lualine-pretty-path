@@ -113,7 +113,7 @@ end
 ---the caller.
 ---@return { [1]: string?, [2]: string? }
 function M:get_icon()
-    return { utils.get_icon(self.path) }
+    return { utils.get_icon(vim.fn.expand("%:t"), vim.bo.filetype, vim.bo.buftype) }
 end
 
 ---Returns an array of shortened directory parts.
