@@ -26,8 +26,8 @@ local M = require("lualine.component"):extend()
 ---@field icon_show_inactive boolean
 ---@field use_color boolean
 ---@field use_absolute boolean
+---@field use_symbols boolean
 ---@field path_sep string
----@field file_status boolean
 ---@field unnamed string
 ---@field symbols PrettyPath.SymbolOptions
 ---@field directories PrettyPath.DirectoryOptions
@@ -41,8 +41,8 @@ local default_options = {
     icon_show_inactive = false,
     use_color = true,
     use_absolute = false,
+    use_symbols = true,
     path_sep = "",
-    file_status = true,
     unnamed = "[No Name]",
     symbols = {
         modified = "",
@@ -64,7 +64,6 @@ local default_options = {
         newfile = "Special",
         path_sep = "",
         symbols = "",
-        term = "Bold",
         unnamed = "",
         verbose = "Comment",
     },

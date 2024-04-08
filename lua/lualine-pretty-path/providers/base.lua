@@ -225,6 +225,9 @@ end
 ---Returns the rendered symbols portion.
 ---@return string?
 function M:render_symbols()
+    if not self.opts.use_symbols then
+        return
+    end
     local symbols = {}
 
     for k, v in pairs({

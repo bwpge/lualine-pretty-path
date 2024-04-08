@@ -68,8 +68,8 @@ The following are the default component options:
     icon_show_inactive = false, -- same as above, but only affects `inactive_sections` (always disabled if icon_show = false)
     use_color = true, -- whether or not to apply highlights to the component, use false to disable all color
     use_absolute = false, -- pass absolute paths to providers
+    use_symbols = true, -- whether or not to indicate file status with symbols
     path_sep = "", -- path separator for styling output (doesn't affect buffer path)
-    file_status = true, -- whether or not to indicate file status with symbols
     unnamed = "[No Name]", -- label for unnamed buffers
     symbols = {
         modified = "", -- somewhat redundant if using modified highlight
@@ -93,7 +93,6 @@ The following are the default component options:
         newfile = "Special", -- highlight if the buffer is new
         path_sep = "", -- highlight for path separator, uses `directory` if empty string
         symbols = "", -- the symbols at the end of the component
-        term = "Bold", -- highlight if the buffer is a terminal
         unnamed = "", -- highlight if the buffer is unnamed
         verbose = "Comment", -- verbose information like terminal PID's
     },
@@ -130,113 +129,6 @@ To use these options, specify them in a table with `"pretty_path"`:
         }
     },
     -- ...
-}
-```
-
-### Pre-Configured Styles
-
-The main module `require("lualine-pretty-path")` includes some common styles. For `lazy.nvim` users, you **must** provide options in your plugin spec as a `function` to ensure this plugin is loaded:
-
-```lua
-{
-    "nvim-lualine/lualine.nvim",
-    dependencies = {
-        "nvim-tree/nvim-web-devicons",
-        "bwpge/lualine-pretty-path",
-    },
-    opts = function()
-        return {
-            sections = {
-                lualine_c = { require("lualine-pretty-path").minimal }
-            }
-        }
-    end,
-}
-```
-
-It is not necessary to use styles from the `lualine-pretty-path` module, they are provided only for convenience. You can copy and paste them directly into your `lualine` config to achieve the same results.
-
-#### `lazy_vim`
-
-**Description:** Produces exactly [LazyVim's](https://www.lazyvim.org/plugins/ui#lualinenvim) style by using the builtin `lualine` filetype component and disables this component's icon.
-
-> [!NOTE]
->
-> There are some subtle icon/padding differences between the default style of this component and LazyVim.
-
-**Usage:**
-
-```lua
-lualine_c = {
-    -- note that this is a function returning a tuple
-    require("lualine-pretty-path").lazy_vim()
-}
-```
-
-**Reference:**
-
-```lua
-lazy_vim = function()
-    return {
-        "filetype",
-        icon_only = true,
-        separator = "",
-        padding = { left = 1, right = 0 },
-    }, {
-        "pretty_path",
-        icon_show = false,
-    }
-end
-```
-
-#### `powerline`
-
-**Description:** Displays path parts as powerline segments.
-
-**Usage:**
-
-```lua
-lualine_c = {
-    require("lualine-pretty-path").powerline
-}
-```
-**Reference:**
-
-```lua
-powerline = {
-    "pretty_path",
-    path_sep = "  ",
-    highlights = {
-        path_sep = "Comment",
-    },
-}
-```
-
-#### `minimal`
-
-**Description:** Disables everything except the filename.
-
-**Usage:**
-
-
-```lua
-lualine_c = {
-    require("lualine-pretty-path").minimal
-}
-```
-**Reference:**
-
-```lua
-minimal = {
-    "pretty_path",
-    icon_show = false,
-    use_color = false,
-    file_status = false,
-    directories = { enable = false },
-    terminals = {
-        show_pid = false,
-        show_term_id = false,
-    },
 }
 ```
 
