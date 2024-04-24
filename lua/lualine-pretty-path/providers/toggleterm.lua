@@ -2,16 +2,18 @@
 ---@field super PrettyPath.TermProvider
 local M = require("lualine-pretty-path.providers.terminal"):extend()
 
+local suffix = vim.fn.has("win32") == 1 and "::toggleterm::" or "#toggleterm#"
+
 function M.can_handle(path)
-    return path:match("::toggleterm::") and vim.bo.buftype == "terminal"
+    return path:match(suffix) and vim.bo.buftype == "terminal"
 end
 
 function M:format_path(path)
     local p = self.super.format_path(self, path)
-    local tid = p:match("::toggleterm::(%d+)$")
+    local tid = p:match(suffix .. "(%d+)$")
     if tid then
         self.tid = tid
-        p = p:gsub("[&;]?::toggleterm::%d+$", "")
+        p = p:gsub("[&;]?" .. suffix .. "%d+$", "")
     end
 
     return p
