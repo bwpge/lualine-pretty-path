@@ -173,8 +173,7 @@ end
 function M:is_new()
     return not self:is_readonly()
         and self.path ~= ""
-        and vim.bo.buftype == ""
-        and vim.fn.filereadable(self.path) == 0
+        and vim.uv.fs_stat(vim.fn.expand("%:p")) == nil
 end
 
 ---Returns whether or not this buffer is modified.
