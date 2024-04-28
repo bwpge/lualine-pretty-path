@@ -173,6 +173,7 @@ end
 function M:is_new()
     return not self:is_readonly()
         and self.path ~= ""
+        and vim.bo.buftype == ""
         and vim.uv.fs_stat(vim.fn.expand("%:p")) == nil
 end
 
