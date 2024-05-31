@@ -125,10 +125,7 @@ To use these options, specify them in a table with `"pretty_path"`:
         {
             "pretty_path",
             icon_show = false,
-            path_sep = "  ", -- powerline/breadcrumb style path
-            terminals = {
-                show_pid = false,
-            },
+            path_sep = "  ",
             highlights = {
                 modified = { fg = "#ff00ff", bold = true, italic = true },
                 path_sep = "Comment",
@@ -213,9 +210,11 @@ This plugin uses the concept of *providers* to parse and render the component co
 
 The `base` provider (`lualine-pretty-path.providers.base`) is implemented to be as flexible as possible, while being easy to override small, logical chunks. The `extend` method allows one to inherit all the logic of the provider and customize certain parts.
 
+All builtin providers can be found in `lua/lualine-pretty-path/providers`.
+
 ### Selecting Providers
 
-The provider selection order is based on `options.providers`. The builtin list is equivalent to:
+The provider selection order is based on `options.providers`. The default provider lookup is equivalent to:
 
 ```lua
 providers = {
@@ -226,14 +225,15 @@ providers = {
     "health",
     "oil",
     "trouble",
+    "dapui",
 }
 ```
 
-Providers can be specified by table values (e.g., `require("some.provider")`) or by strings (similar to how `lualine` requires components). The providers in your config will always take priority over the builtin ones.
+Providers can be specified by table values (e.g., `require("some.provider")`) or by strings (similar to how `lualine` includes components, they must be in `lua/lualine-pretty-path/providers`). The providers in your config will always take priority over the builtin ones.
 
 ### Default Provider
 
-If no provider matches from `options.providers` or the builtin list, the default (`base`) is used. This can be overridden with the `default` field:
+If no provider matches from `options.providers` or the builtin list, the default (`base`) is used. This can be changed with the `default` field:
 
 ```lua
 providers = {
