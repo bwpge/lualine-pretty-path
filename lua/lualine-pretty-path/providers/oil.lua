@@ -16,7 +16,12 @@ function M:render_dir()
     local dir = self.super.render_dir(self) or ""
     dir = dir:sub(1, #dir - #self.path_sep) -- remove trailing separator
 
-    return self.hl(dir, self.opts.highlights.filename)
+    local hl = self.opts.highlights.filename
+    if self:is_modified() then
+        hl = self.opts.highlights.modified
+    end
+
+    return self.hl(dir, hl)
 end
 
 function M:render()

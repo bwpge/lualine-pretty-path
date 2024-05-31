@@ -222,10 +222,10 @@ function M:render_name()
     end
 
     local name_hl = ""
-    if self:is_unnamed() then
-        name_hl = self.opts.highlights.unnamed
-    elseif self:is_modified() then
+    if self:is_modified() then
         name_hl = self.opts.highlights.modified
+    elseif self:is_unnamed() then
+        name_hl = self.opts.highlights.unnamed
     elseif self:is_new() then
         name_hl = self.opts.highlights.newfile
     else
