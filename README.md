@@ -99,16 +99,18 @@ The following are the default component options:
     -- to avoid messing with the global nvim-web-devicon config, you can provide custom icons to be
     -- used only by this plugin. entries must be a list of strings `{ icon, highlight_name }`
     custom_icons = {
-        trouble = { "󰔫", "DevIconGitConfig" },
-        Trouble = { "󰔫", "DevIconGitConfig" },
         gitrebase = { "", "DevIconGitCommit" },
         help = { "󰋖", "DevIconTxt" },
+        oil = { "", "OilDir" },
+        trouble = { "󰔫", "DevIconGitConfig" },
+        Trouble = { "󰔫", "DevIconGitConfig" },
     },
     -- some icons may need additional padding depending on your font and terminal.
     -- refer to nvim-web-devicons for the correct key (icon):
     -- https://github.com/nvim-tree/nvim-web-devicons/blob/master/lua/nvim-web-devicons/icons-default.lua
     icon_padding = {
         [""] = 1, -- value here adds *additional* spaces (use 0 or negative to disable)
+        [""] = 1,
     },
     providers = {}, -- see *providers* section
 }
@@ -221,6 +223,8 @@ providers = {
     "fugitive",
     "toggleterm",
     "terminal",
+    "health",
+    "oil",
     "trouble",
 }
 ```
