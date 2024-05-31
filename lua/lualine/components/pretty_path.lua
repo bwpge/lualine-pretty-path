@@ -90,6 +90,7 @@ local builtin_providers = {
     require("lualine-pretty-path.providers.health"),
     require("lualine-pretty-path.providers.oil"),
     require("lualine-pretty-path.providers.trouble"),
+    require("lualine-pretty-path.providers.dapui"),
 }
 
 function M:init(options)

@@ -47,6 +47,10 @@ function M.get_icon(s, filetype, buftype)
     end
 
     local icon, hl = icons.get_icon(s)
+    -- use correct icon for treesitter query buffers
+    if filetype == "query" then
+        icon, hl = icons.get_icon_by_filetype(filetype)
+    end
     if not icon and filetype then
         icon, hl = icons.get_icon_by_filetype(filetype)
     end
