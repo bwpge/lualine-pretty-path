@@ -222,7 +222,7 @@ providers = {
     "fugitive",
     "toggleterm",
     "terminal",
-    "health",
+    "checkhealth",
     "oil",
     "trouble",
     "dapui",

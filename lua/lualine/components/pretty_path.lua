@@ -87,7 +87,7 @@ local builtin_providers = {
     require("lualine-pretty-path.providers.fugitive"),
     require("lualine-pretty-path.providers.toggleterm"),
     require("lualine-pretty-path.providers.terminal"),
-    require("lualine-pretty-path.providers.health"),
+    require("lualine-pretty-path.providers.checkhealth"),
     require("lualine-pretty-path.providers.oil"),
     require("lualine-pretty-path.providers.trouble"),
     require("lualine-pretty-path.providers.dapui"),
