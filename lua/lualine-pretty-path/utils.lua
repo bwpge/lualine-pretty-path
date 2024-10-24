@@ -88,7 +88,7 @@ end
 function M.resolve_providers(list)
     local resolved_list = {}
 
-    for i, item in ipairs(list) do
+    for _, item in ipairs(list) do
         local resolved_item = require_provider(item)
         if resolved_item then
             table.insert(resolved_list, resolved_item)
@@ -97,8 +97,8 @@ function M.resolve_providers(list)
 
     if list.default then
         local resolved_item = require_provider(list.default)
-        if resolve_item then
-            resolved_list.default = resolve_item
+        if resolved_item then
+            resolved_list.default = resolved_item
         end
     end
 
