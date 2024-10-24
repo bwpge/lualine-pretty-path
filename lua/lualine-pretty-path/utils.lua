@@ -74,7 +74,9 @@ local function require_provider(item)
             { title = "pretty-path" }
         )
         return p
-    elseif type(item) ~= "table" then
+    elseif type(item) == "table" then
+        return item
+    else
         vim.notify(
             "Provider must be a table or string value (got " .. type(item) .. ")",
             vim.log.levels.WARN,
@@ -84,17 +86,23 @@ local function require_provider(item)
 end
 
 function M.resolve_providers(list)
+    local resolved_list = {}
+
     for i, item in ipairs(list) do
-        list[i] = require_provider(item)
+        local resolved_item = require_provider(item)
+        if resolved_item then
+            table.insert(resolved_list, resolved_item)
+        end
     end
 
     if list.default then
-        list.default = require_provider(list.default)
+        local resolved_item = require_provider(list.default)
+        if resolve_item then
+            resolved_list.default = resolve_item
+        end
     end
 
-    return vim.tbl_filter(function(x)
-        return x ~= nil
-    end, list)
+    return resolved_list
 end
 
 return M
