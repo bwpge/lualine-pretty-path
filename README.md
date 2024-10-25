@@ -299,3 +299,11 @@ The `base` implementation contains a lot of documentation to help make this exte
 ## Contributing
 
 Contributions are welcome. The best way to start is to [create an issue](https://github.com/bwpge/lualine-pretty-path/issues/new/choose) and have a discussion. This helps coordinate efforts and align expectations for all parties involved.
+
+### Commit Messages
+
+Use [conventional commit messages](https://conventionalcommits.org) in your pull request title. Link to the issue(s) using keywords in the body of the pull request (refer to the [GitHub docs](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword) for more info).
+
+### Formatting
+
+All pull requests must be formatted with [`stylua`](https://github.com/JohnnyMorganz/StyLua) using the included `stylua.toml`.
