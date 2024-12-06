@@ -210,7 +210,8 @@ function M:render_dir()
 
     local sep = self.hl(self.opts.path_sep, self.opts.highlights.path_sep)
     local dir = table.concat(slice, sep)
-    return self.hl(dir .. sep, self.opts.highlights.directory)
+    local escaped_path = (dir .. sep):gsub("%%", "%%%%")
+    return self.hl(escaped_path, self.opts.highlights.directory)
 end
 
 ---Returns the rendered name portion.
@@ -232,7 +233,8 @@ function M:render_name()
         name_hl = self.opts.highlights.filename
     end
 
-    return self.hl(name, name_hl)
+    local escaped_name = name:gsub("%%", "%%%%")
+    return self.hl(escaped_name, name_hl)
 end
 
 ---Returns the rendered symbols portion.
